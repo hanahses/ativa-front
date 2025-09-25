@@ -1,17 +1,16 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
-  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // ✅ Imports tipados dos módulos criados
+import AuthLayout from '../../src/components/authLayout';
 import { colors, loginStyles } from '../../src/styles/styles';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../../src/utils/constants';
 import { ValidationResult, validators } from '../../src/utils/validation';
@@ -27,8 +26,8 @@ type PasswordState = string;
 
 const LoginScreen: React.FC<LoginScreenProps> = () => {
   // ✅ Estados tipados
-  const [email, setEmail] = useState<EmailState>('email@exemplo.com');
-  const [password, setPassword] = useState<PasswordState>('***********');
+  const [email, setEmail] = useState<EmailState>('');
+  const [password, setPassword] = useState<PasswordState>('');
   const [loading, setLoading] = useState<LoadingState>(false);
   const [emailError, setEmailError] = useState<ErrorState>('');
   const [passwordError, setPasswordError] = useState<ErrorState>('');
@@ -92,9 +91,8 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
           {
             text: 'OK',
             onPress: (): void => {
-              // ALTERE AQUI: Navegue para a próxima tela
-              // Exemplo: navigation.navigate('Home');
-              console.log('Usuário logado:', data);
+              // Navegue para a próxima tela (ex: Home)
+              router.push('/home');
             }
           }
         ]);
@@ -123,118 +121,102 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
     if (passwordError) setPasswordError('');
   };
 
+  // ✅ Funções de navegação
+  const handleForgotPassword = (): void => {
+    router.push('/forgotPass');
+  };
+
+  const handleRegister = (): void => {
+    router.push('/register');
+  };
+
+  // const handleGuestAccess = (): void => {
+  //   router.push('/guest');
+  // };
+
   return (
-    <SafeAreaView style={loginStyles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      
-      {/* Header com logos */}
-      <View style={loginStyles.header}>
-        <View style={loginStyles.logoContainer}>
-          {/* Logo UNIVASF */}
-          <View style={loginStyles.logoItem}>
-            <Image 
-              source={require('@/assets/images/logo_univasf.png')}
-              style={loginStyles.univasfLogo}
-              resizeMode="contain"
-            />
-          </View>
-          
-          {/* Logo UPE */}
-          <View style={loginStyles.logoItem}>
-            <Image 
-              source={require('@/assets/images/Logo-upe-site.png')}
-              style={loginStyles.upeLogo}
-              resizeMode="contain"
-            />
-          </View>
-          
-          {/* Logo Projeto Atitude */}
-          <View style={loginStyles.logoItem}>
-            <Image 
-              source={require('@/assets/images/Projeto_Atitude_Logotipo.png')}
-              style={loginStyles.atitudeLogo}
-              resizeMode="contain"
-            />         
-           </View>
-        </View>
+    <AuthLayout isLoading={loading}>
+      {/* Campo Email */}
+      <View style={loginStyles.inputContainer}>
+        <Text style={loginStyles.label}>Email:</Text>
+        <TextInput
+          style={[loginStyles.input, emailError ? loginStyles.inputError : null]}
+          value={email}
+          onChangeText={handleEmailChange}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          editable={!loading}
+          placeholder="Digite seu email"
+          placeholderTextColor={colors.text.secondary}
+        />
+        {emailError ? <Text style={loginStyles.errorText}>{emailError}</Text> : null}
       </View>
 
-      {/* Conteúdo principal */}
-      <View style={loginStyles.content}>
-        {/* Campo Email */}
-        <View style={loginStyles.inputContainer}>
-          <Text style={loginStyles.label}>Email:</Text>
-          <TextInput
-            style={[loginStyles.input, emailError ? loginStyles.inputError : null]}
-            value={email}
-            onChangeText={handleEmailChange}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            editable={!loading}
-            placeholder="Digite seu email"
-            placeholderTextColor={colors.text.secondary}
-          />
-          {emailError ? <Text style={loginStyles.errorText}>{emailError}</Text> : null}
-        </View>
+      {/* Campo Senha */}
+      <View style={loginStyles.inputContainer}>
+        <Text style={loginStyles.label}>Senha:</Text>
+        <TextInput
+          style={[loginStyles.input, passwordError ? loginStyles.inputError : null]}
+          value={password}
+          onChangeText={handlePasswordChange}
+          secureTextEntry
+          editable={!loading}
+          placeholder="Digite sua senha"
+          placeholderTextColor={colors.text.secondary}
+        />
+        {passwordError ? <Text style={loginStyles.errorText}>{passwordError}</Text> : null}
+      </View>
 
-        {/* Campo Senha */}
-        <View style={loginStyles.inputContainer}>
-          <Text style={loginStyles.label}>Senha:</Text>
-          <TextInput
-            style={[loginStyles.input, passwordError ? loginStyles.inputError : null]}
-            value={password}
-            onChangeText={handlePasswordChange}
-            secureTextEntry
-            editable={!loading}
-            placeholder="Digite sua senha"
-            placeholderTextColor={colors.text.secondary}
-          />
-          {passwordError ? <Text style={loginStyles.errorText}>{passwordError}</Text> : null}
-        </View>
-
-        {/* Links auxiliares */}
-        <View style={loginStyles.linksContainer}>
-          <TouchableOpacity style={loginStyles.registerLinkContainer}>
-            <Text style={loginStyles.linkText}>Não possui uma conta?</Text>
-            <Text style={[loginStyles.linkText, loginStyles.underline]}>Cadastre-se aqui</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity>
-            <Text style={[loginStyles.linkText, loginStyles.underline]}>Esqueceu sua senha?</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Botão Entrar */}
+      {/* Links auxiliares */}
+      <View style={loginStyles.linksContainer}>
         <TouchableOpacity 
-          style={[loginStyles.loginButton, loading && loginStyles.disabledButton]} 
-          onPress={handleLogin}
+          style={loginStyles.registerLinkContainer}
+          onPress={handleRegister}
           disabled={loading}
-          activeOpacity={0.8}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color={colors.text.white} />
-          ) : (
-            <Text style={loginStyles.loginButtonText}>Entrar</Text>
-          )}
+          <Text style={loginStyles.linkText}>Não possui uma conta?</Text>
+          <Text style={[loginStyles.linkText, loginStyles.underline]}>Cadastre-se aqui</Text>
         </TouchableOpacity>
-
-        {/* Divisor "Ou" */}
-        <View style={loginStyles.dividerContainer}>
-          <View style={loginStyles.dividerLine} />
-          <Text style={loginStyles.dividerText}>Ou</Text>
-          <View style={loginStyles.dividerLine} />
-        </View>
-
-        {/* Botão Acesse como convidado */}
+        
         <TouchableOpacity 
-          style={loginStyles.guestButton} 
+          onPress={handleForgotPassword}
           disabled={loading}
-          activeOpacity={0.8}
         >
-          <Text style={loginStyles.guestButtonText}>Acesse como convidado</Text>
+          <Text style={[loginStyles.linkText, loginStyles.underline]}>Esqueceu sua senha?</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+
+      {/* Botão Entrar */}
+      <TouchableOpacity 
+        style={[loginStyles.loginButton, loading && loginStyles.disabledButton]} 
+        onPress={handleLogin}
+        disabled={loading}
+        activeOpacity={0.8}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={colors.text.white} />
+        ) : (
+          <Text style={loginStyles.loginButtonText}>Entrar</Text>
+        )}
+      </TouchableOpacity>
+
+      {/* Divisor "Ou" */}
+      <View style={loginStyles.dividerContainer}>
+        <View style={loginStyles.dividerLine} />
+        <Text style={loginStyles.dividerText}>Ou</Text>
+        <View style={loginStyles.dividerLine} />
+      </View>
+
+      {/* Botão Acesse como convidado */}
+      <TouchableOpacity 
+        style={loginStyles.guestButton} 
+       // onPress={handleGuestAccess}
+        disabled={loading}
+        activeOpacity={0.8}
+      >
+        <Text style={loginStyles.guestButtonText}>Acesse como convidado</Text>
+      </TouchableOpacity>
+    </AuthLayout>
   );
 };
 

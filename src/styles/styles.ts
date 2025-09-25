@@ -22,16 +22,20 @@ export const colors = {
   },
 } as const;
 
-// Estilos da tela de login
+// Estilos compartilhados entre as telas de autenticação (login e recuperação de senha)
 export const loginStyles = StyleSheet.create({
+  // Layout principal
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
+  
+  // Header com logos
   header: {
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 40,
+    position: 'relative',
   },
   logoContainer: {
     flexDirection: 'row',
@@ -47,19 +51,50 @@ export const loginStyles = StyleSheet.create({
     height: 37.93,
   },
   upeLogo: {
-    width: 55.620506286621094,
-    height: 24.772159576416016,
+    width: 55.62,
+    height: 24.77,
     opacity: 1,
   },
   atitudeLogo: {
-    width: 116.74110412597656,
-    height: 42.62668228149414,
+    width: 116.74,
+    height: 42.63,
     opacity: 1,
   },
+  
+  // Botão voltar (usado na tela de recuperação)
+  backButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    zIndex: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  backButtonText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+
+  // Conteúdo principal
   content: {
     flex: 1,
     paddingHorizontal: 20,
   },
+  
+  // Texto explicativo (usado na tela de recuperação)
+  explanationContainer: {
+    marginBottom: 30,
+    paddingHorizontal: 10,
+  },
+  explanationText: {
+    fontSize: 16,
+    color: colors.text.primary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  // Inputs e formulário
   inputContainer: {
     marginBottom: 20,
   },
@@ -89,6 +124,8 @@ export const loginStyles = StyleSheet.create({
     marginTop: 5,
     marginLeft: 5,
   },
+
+  // Links (usado apenas na tela de login)
   linksContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -105,6 +142,8 @@ export const loginStyles = StyleSheet.create({
   underline: {
     textDecorationLine: 'underline',
   },
+
+  // Botões
   loginButton: {
     backgroundColor: colors.primary,
     paddingVertical: 15,
@@ -122,6 +161,21 @@ export const loginStyles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
+  guestButton: {
+    backgroundColor: colors.secondary,
+    paddingVertical: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.secondaryBorder,
+  },
+  guestButtonText: {
+    color: colors.secondaryText,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // Divisor "Ou" (usado apenas na tela de login)
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -137,23 +191,11 @@ export const loginStyles = StyleSheet.create({
     color: colors.text.secondary,
     fontSize: 16,
   },
-  guestButton: {
-    backgroundColor: colors.secondary,
-    paddingVertical: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.secondaryBorder,
-  },
-  guestButtonText: {
-    color: colors.secondaryText,
-    fontSize: 16,
-    fontWeight: '600',
-  },
 });
 
-// Estilos globais que podem ser reutilizados
+// Estilos globais reutilizáveis (para outras telas do app)
 export const globalStyles = StyleSheet.create({
+  // Layout
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -163,6 +205,8 @@ export const globalStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  
+  // Botões genéricos
   button: {
     paddingVertical: 15,
     borderRadius: 8,
@@ -191,6 +235,8 @@ export const globalStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  
+  // Inputs genéricos
   input: {
     borderWidth: 1,
     borderColor: colors.border.default,
