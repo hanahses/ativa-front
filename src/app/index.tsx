@@ -10,9 +10,10 @@ import {
 } from 'react-native';
 
 // ✅ Imports tipados dos módulos criados
-import AuthLayout from '../../src/components/authLayout';
+import AuthLayout from '@/src/components/authLayout';
+import authService from '../../src/services/authService';
 import { colors, loginStyles } from '../../src/styles/styles';
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../../src/utils/constants';
+import { ERROR_MESSAGES } from '../../src/utils/constants';
 import { ValidationResult, validators } from '../../src/utils/validation';
 
 // ✅ Interface para tipagem do componente
@@ -70,40 +71,22 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
     setLoading(true);
     
     try {
-      // ✅ Tipagem explícita para a resposta da API
-      const response: Response = await fetch('https://seu-backend.com/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          password: password,
-        }),
-      });
+      // ✅ Usa o serviço de autenticação
+      const response = await authService.login(email, password);
 
-      // ✅ Tipagem para os dados da resposta
-      const data: any = await response.json();
-
-      if (response.ok) {
-        // ✅ Usando constante tipada
-        Alert.alert('Sucesso', SUCCESS_MESSAGES.LOGIN_SUCCESS, [
-          {
-            text: 'OK',
-            onPress: (): void => {
-              // Navegue para a próxima tela (ex: Home)
-              router.push('/home');
-            }
-          }
-        ]);
+      if (response.success && response.data) {
+        // ✅ Login bem-sucedido
+        console.log('Login bem-sucedido:', response.data);
+        
+        // ✅ Navega para a tela home (usando replace para não permitir voltar ao login)
+        router.replace('/home');
       } else {
-        // ✅ Usando constantes tipadas
-        const errorMessage: string = data.message || ERROR_MESSAGES.INVALID_CREDENTIALS;
-        Alert.alert('Erro', errorMessage);
+        // ✅ Tratamento de erro do servidor
+        const errorMessage = response.message || ERROR_MESSAGES.INVALID_CREDENTIALS;
+        Alert.alert('Erro no Login', errorMessage);
       }
     } catch (error: unknown) {
       console.error('Erro no login:', error);
-      // ✅ Usando constante tipada
       Alert.alert('Erro de Conexão', ERROR_MESSAGES.NETWORK_ERROR);
     } finally {
       setLoading(false);
@@ -130,9 +113,10 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
     router.push('/register');
   };
 
-  // const handleGuestAccess = (): void => {
-  //   router.push('/guest');
-  // };
+  const handleGuestAccess = (): void => {
+    // Navega para home sem autenticação (modo convidado)
+    router.replace('/home');
+  };
 
   return (
     <AuthLayout isLoading={loading}>
@@ -210,7 +194,7 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
       {/* Botão Acesse como convidado */}
       <TouchableOpacity 
         style={loginStyles.guestButton} 
-       // onPress={handleGuestAccess}
+        onPress={handleGuestAccess}
         disabled={loading}
         activeOpacity={0.8}
       >
