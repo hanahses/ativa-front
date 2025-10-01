@@ -1,16 +1,16 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 // ✅ Imports tipados dos módulos criados
-import AuthLayout from '../../src/components/authLayout';
+import AuthLayout from '@/src/components/authLayout';
 import { colors, loginStyles } from '../../src/styles/styles';
 import { ERROR_MESSAGES } from '../../src/utils/constants';
 import { ValidationResult, validators } from '../../src/utils/validation';
@@ -93,8 +93,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = () => {
     setLoading(true);
     
     try {
+      console.log('🔍 Tentando cadastrar em:', 'http://10.0.2.2:8080/users/students/register');
+      console.log('📋 Dados:', { name: name.trim(), email: email.trim() });
+      
       // ✅ Tipagem explícita para a resposta da API
-      const response: Response = await fetch('https://seu-backend.com/api/auth/register', {
+      const response: Response = await fetch('http://10.0.2.2:8080/users/students/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,8 +109,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = () => {
         }),
       });
 
+      console.log('📡 Status:', response.status);
+      
       // ✅ Tipagem para os dados da resposta
       const data: any = await response.json();
+      console.log('📦 Resposta:', data);
 
       if (response.ok) {
         // ✅ Sucesso no cadastro
@@ -136,7 +142,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = () => {
         }
       }
     } catch (error: unknown) {
-      console.error('Erro no cadastro:', error);
+      console.error('❌ Erro no cadastro:', error);
       // ✅ Usando constante tipada
       Alert.alert('Erro de Conexão', ERROR_MESSAGES.NETWORK_ERROR);
     } finally {
@@ -168,6 +174,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = () => {
   return (
     <AuthLayout 
       showBackButton={true} 
+      title="Insira seus dados:"
       isLoading={loading}
     >
       {/* Campo Nome */}
