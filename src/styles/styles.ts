@@ -1,5 +1,5 @@
 // src/styles/styles.ts
-import { StyleSheet, Dimensions } from 'react-native';
+import { Dimensions, StyleSheet } from 'react-native';
 
 const { height } = Dimensions.get('window');
 
@@ -317,8 +317,9 @@ export const homeStyles = StyleSheet.create({
   // Retângulo do Mapa
   mapContainer: {
     flex: 1,
-    padding: 20,
-    paddingTop: 80,
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   mapPlaceholder: {
     flex: 1,
