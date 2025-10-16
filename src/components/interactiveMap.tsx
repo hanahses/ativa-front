@@ -4,10 +4,10 @@ import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from 'react-nat
 import Svg, { G, Path } from 'react-native-svg';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const MAP_CONTAINER_WIDTH = SCREEN_WIDTH - 50; // Largura do container
-const MAP_CONTAINER_HEIGHT = SCREEN_HEIGHT * 0.65; // Altura do container
-const PADDING = 5; // Padding interno
-const MAP_WIDTH = MAP_CONTAINER_WIDTH - (PADDING * 2); // Largura efetiva do SVG
+const MAP_CONTAINER_WIDTH = SCREEN_WIDTH - 20; // Largura do container
+const MAP_CONTAINER_HEIGHT = SCREEN_HEIGHT * 0.62; // Altura do container
+const PADDING = 20; // Padding interno
+const MAP_WIDTH = MAP_CONTAINER_WIDTH - (PADDING * 0.1); // Largura efetiva do SVG
 const MAP_HEIGHT = MAP_CONTAINER_HEIGHT - (PADDING * 2); // Altura efetiva do SVG
 
 interface InteractiveMapProps {
@@ -71,8 +71,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
         }
       });
 
-      const latPadding = (maxLat - minLat) * 0.005; // Reduzido de 0.05 para 0.02
-      const lonPadding = (maxLon - minLon) * 0.005;
+      const latPadding = (maxLat - minLat) * 0.02; 
+      const lonPadding = (maxLon - minLon) * 0.02;
 
       minLat -= latPadding;
       maxLat += latPadding;
@@ -100,7 +100,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
     const dataAspect = dataWidth / dataHeight;
     const containerAspect = MAP_WIDTH / MAP_HEIGHT;
     
-    let scale, offsetX = 45, offsetY = 0;
+    let scale, offsetX = 40, offsetY = 10;
     
     // Ajustar para preencher o container mantendo proporção
     if (dataAspect > containerAspect) {
@@ -110,7 +110,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
     } else {
       // Dados são mais altos - ajustar pela altura
       scale = MAP_HEIGHT / dataHeight;
-      offsetX = (MAP_WIDTH - (dataWidth * scale)) / 3;
+      offsetX = (MAP_WIDTH - (dataWidth * scale)) / 2;
     }
     
     const x = ((lon - minLon) * scale) + offsetX;
@@ -222,10 +222,11 @@ const styles = StyleSheet.create({
   },
   mapBorder: {
     width: MAP_CONTAINER_WIDTH,
+    top: 55,
     height: MAP_CONTAINER_HEIGHT,
     borderWidth: 3,
     borderColor: '#2B5D36',
-    borderRadius: 12,
+    borderRadius: 0,
     backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   legendContainer: {
-    marginTop: 15,
+    marginTop: 0,
     paddingVertical: 10,
     paddingHorizontal: 20,
     backgroundColor: '#2B5D36',

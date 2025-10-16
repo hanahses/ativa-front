@@ -6,6 +6,7 @@ import { FILTER_PANEL_HEIGHT, homeStyles } from '@/src/styles/styles';
 import React, { useState } from 'react';
 import {
   Animated,
+  Image,
   Modal,
   ScrollView,
   Text,
@@ -144,11 +145,11 @@ const HomeScreen: React.FC = () => {
         <View style={homeStyles.content}>
           {/* Botão de estatísticas flutuante (canto superior direito) */}
           <TouchableOpacity style={homeStyles.floatingStatsButton}>
-            <View style={homeStyles.statsIcon}>
-              <View style={[homeStyles.statsBar, homeStyles.statsBar1]} />
-              <View style={[homeStyles.statsBar, homeStyles.statsBar2]} />
-              <View style={[homeStyles.statsBar, homeStyles.statsBar3]} />
-            </View>
+            <Image
+                source={require('@/assets/images/dashboard_btn.png')}
+                //style={styles.menuIcon}
+                resizeMode="contain"
+            />
           </TouchableOpacity>
 
            {/* Área do Mapa com ScrollView */}
@@ -200,15 +201,26 @@ const HomeScreen: React.FC = () => {
               onStartShouldSetResponder={() => true}
             >
               {/* Header do Filtro */}
+              <TouchableOpacity onPress={closeFilters}>
               <View style={homeStyles.filterHeader}>
-                <TouchableOpacity onPress={closeFilters}>
                   <Text style={homeStyles.filterHeaderIcon}>ˇ</Text>
-                </TouchableOpacity>
-                <Text style={homeStyles.filterTitle}>FILTROS</Text>
-                <TouchableOpacity onPress={closeFilters}>
+                  <Text style={homeStyles.filterTitle}>FILTROS</Text>
                   <Text style={homeStyles.filterHeaderIcon}>ˇ</Text>
-                </TouchableOpacity>
               </View>
+              </TouchableOpacity>
+
+
+              {/* <View style={homeStyles.filterHeader}>
+                <TouchableOpacity onPress={closeFilters}>
+                  <Text style={homeStyles.filterHeaderIcon}>ˇ</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={closeFilters}>
+                  <Text style={homeStyles.filterTitle}>FILTROS</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={closeFilters}>
+                  <Text style={homeStyles.filterHeaderIcon}>ˇ</Text>
+                </TouchableOpacity>
+              </View> */}
 
               {/* Conteúdo dos Filtros */}
               <ScrollView style={homeStyles.filterContent}>
@@ -512,12 +524,5 @@ const HomeScreen: React.FC = () => {
     </ProtectedRoute>
   );
 };
-
-// export default HomeScreen;          </TouchableOpacity>
-//         </Modal>
-//       </SafeAreaView>
-//     </ProtectedRoute>
-//   );
-// };
 
 export default HomeScreen;

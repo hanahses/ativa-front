@@ -5,7 +5,7 @@ const { height } = Dimensions.get('window');
 
 // Cores do projeto
 export const colors = {
-  primary: '#27ae60',
+  primary: '#28783A',
   primaryDisabled: '#95a5a6',
   secondary: '#d4af37',
   secondaryBorder: '#b8941f',
@@ -285,7 +285,7 @@ export const homeStyles = StyleSheet.create({
   floatingStatsButton: {
     position: 'absolute',
     top: 15,
-    right: 15,
+    right: 0,
     width: 56,
     height: 56,
     backgroundColor: colors.primary,
@@ -299,20 +299,6 @@ export const homeStyles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  statsIcon: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    height: 24,
-  },
-  statsBar: {
-    width: 6,
-    backgroundColor: colors.white,
-    marginHorizontal: 2,
-    borderRadius: 3,
-  },
-  statsBar1: { height: 12 },
-  statsBar2: { height: 20 },
-  statsBar3: { height: 16 },
 
   // Retângulo do Mapa
   mapContainer: {
@@ -321,25 +307,11 @@ export const homeStyles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 10,
   },
-  mapPlaceholder: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mapText: {
-    fontSize: 18,
-    color: colors.text.secondary,
-    fontWeight: '600',
-  },
 
   // Botão Filtros
   filterButton: {
     backgroundColor: colors.white,
-    marginHorizontal: 20,
+    marginHorizontal: 10,
     marginBottom: 20,
     paddingVertical: 16,
     borderRadius: 8,
@@ -353,7 +325,7 @@ export const homeStyles = StyleSheet.create({
   },
   filterButtonContent: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
   filterButtonIcon: {
@@ -480,8 +452,10 @@ export const homeStyles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   applyButton: {
-    backgroundColor: colors.primary,
+    marginHorizontal: 80,
+    marginBottom: 10,
     paddingVertical: 15,
+    backgroundColor: colors.primary,
     borderRadius: 8,
     alignItems: 'center',
   },

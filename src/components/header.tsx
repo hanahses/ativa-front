@@ -2,15 +2,15 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Image,
-    Modal,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  Image,
+  Modal,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import authService from '../services/authService';
 import { colors } from '../styles/styles';
