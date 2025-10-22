@@ -64,11 +64,20 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     }).start();
   };
 
+  // Abre ou fecha o menu superior (toggle)
+  const toggleTopMenu = () => {
+    if (topMenuVisible) {
+      closeTopMenu();
+    } else {
+      openTopMenu();
+    }
+  };
+
   // Fecha o menu superior
   const closeTopMenu = () => {
     Animated.timing(slideDownAnim, {
       toValue: -60,
-      duration: 250,
+      duration: 200,
       useNativeDriver: true,
     }).start(() => {
       setTopMenuVisible(false);
@@ -109,49 +118,101 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     <>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       
-      {/* Header */}
-      <View style={styles.header}>
-        {/* Botão Menu (esquerda) */}
-        {showMenuButton && (
-          <TouchableOpacity
-            style={styles.menuButton}
-            onPress={openDrawer}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={require('@/assets/images/header_user.png')}
-              style={styles.menuIcon}
-              resizeMode="contain"
+      {/* Container que engloba menu e header */}
+      <View style={styles.headerContainer}>
+        {/* Menu Superior (renderizado diretamente, não em Modal) */}
+        {topMenuVisible && (
+          <>
+            {/* Overlay escuro */}
+            <TouchableOpacity
+              style={styles.overlayDirect}
+              activeOpacity={1}
+              onPress={closeTopMenu}
             />
-          </TouchableOpacity>
+            
+            {/* Menu Superior */}
+            <Animated.View
+              style={[
+                styles.topMenu,
+                {
+                  transform: [{ translateY: slideDownAnim }],
+                },
+              ]}
+            >
+              <View style={styles.topMenuItems}>
+                <TouchableOpacity
+                  style={styles.topMenuItem}
+                  onPress={() => navigateFromTopMenu('/cards')}
+                >
+                  <Text style={styles.topMenuText}>Cards informativos</Text>
+                </TouchableOpacity>
+
+                <View style={styles.topMenuDivider} />
+
+                <TouchableOpacity
+                  style={styles.topMenuItem}
+                  onPress={() => navigateFromTopMenu('/home')}
+                >
+                  <Text style={styles.topMenuText}>Mapa interativo</Text>
+                </TouchableOpacity>
+
+                <View style={styles.topMenuDivider} />
+
+                <TouchableOpacity
+                  style={styles.topMenuItem}
+                  onPress={() => navigateFromTopMenu('/ranking')}
+                >
+                  <Text style={styles.topMenuText}>Ranking</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </>
         )}
 
-        {/* Logo Central */}
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('@/assets/images/Projeto_Atitude_Logotipo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+        {/* Header */}
+        <View style={styles.header}>
+          {/* Botão Menu (esquerda) */}
+          {showMenuButton && (
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={openDrawer}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={require('@/assets/images/header_user.png')}
+                style={styles.menuIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          )}
+
+          {/* Logo Central */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/Projeto_Atitude_Logotipo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Botão Estatísticas (direita) */}
+          {showStatsButton && (
+            <TouchableOpacity
+              style={styles.statsButton}
+              onPress={toggleTopMenu}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={require('@/assets/images/header_menu.png')}
+                style={styles.menuIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          )}
         </View>
-
-        {/* Botão Estatísticas (direita) */}
-        {showStatsButton && (
-          <TouchableOpacity
-            style={styles.statsButton}
-            onPress={openTopMenu}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={require('@/assets/images/header_menu.png')}
-              style={styles.menuIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        )}
       </View>
 
-      {/* Drawer Menu (Modal) */}
+      {/* Drawer Menu (Modal - mantido porque é lateral) */}
       <Modal
         visible={drawerVisible}
         transparent
@@ -206,63 +267,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           </Animated.View>
         </TouchableOpacity>
       </Modal>
-
-      {/* Menu Superior (Top Menu) */}
-      <Modal
-        visible={topMenuVisible}
-        transparent
-        animationType="none"
-        onRequestClose={closeTopMenu}
-      >
-        {/* Overlay escuro */}
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={closeTopMenu}
-        >
-          {/* Menu Superior */}
-          <Animated.View
-            style={[
-              styles.topMenu,
-              {
-                transform: [{ translateY: slideDownAnim }],
-              },
-            ]}
-          >
-            <View style={styles.topMenuItems}>
-              <TouchableOpacity
-                style={styles.topMenuItem}
-                onPress={() => navigateFromTopMenu('/home')}
-              >
-                <Text style={styles.topMenuText}>Página inicial</Text>
-              </TouchableOpacity>
-
-              <View style={styles.topMenuDivider} />
-
-              <TouchableOpacity
-                style={styles.topMenuItem}
-                onPress={() => navigateFromTopMenu('/map')}
-              >
-                <Text style={styles.topMenuText}>Mapa interativo</Text>
-              </TouchableOpacity>
-
-              <View style={styles.topMenuDivider} />
-
-              <TouchableOpacity
-                style={styles.topMenuItem}
-                onPress={() => navigateFromTopMenu('/ranking')}
-              >
-                <Text style={styles.topMenuText}>Ranking</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </TouchableOpacity>
-      </Modal>
     </>
   );
 };
 
 const styles = StyleSheet.create({
+  // Container do header e menu
+  headerContainer: {
+    position: 'relative',
+  },
+
   // Header principal
   header: {
     backgroundColor: '#2B5D36',
@@ -272,6 +286,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 15,
     paddingTop: 50,
+    zIndex: 100, // Header fica na frente
+    elevation: 100, // Para Android
+    position: 'relative',
   },
 
   // Botão menu (esquerda)
@@ -311,6 +328,17 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.0)',
+  },
+
+  // Overlay direto (sem modal)
+  overlayDirect: {
+    position: 'absolute',
+    top: HEADER_HEIGHT, // Começa abaixo do header
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.0)',
+    zIndex: 50,
   },
 
   // Drawer (menu lateral)
@@ -354,13 +382,15 @@ const styles = StyleSheet.create({
     top: HEADER_HEIGHT,
     backgroundColor: '#234A2C',
     paddingVertical: 8,
+    zIndex: 50, // Menu superior atrás do header
+    elevation: 50, // Para Android
   },
 
   topMenuItems: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 15,
+    paddingHorizontal: 5,
   },
 
   topMenuItem: {

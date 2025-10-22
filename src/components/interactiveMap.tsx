@@ -1,14 +1,20 @@
 // src/components/InteractiveMap.tsx
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import Svg, { G, Path } from 'react-native-svg';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const MAP_CONTAINER_WIDTH = SCREEN_WIDTH - 20; // Largura do container
-const MAP_CONTAINER_HEIGHT = SCREEN_HEIGHT * 0.62; // Altura do container
-const PADDING = 20; // Padding interno
-const MAP_WIDTH = MAP_CONTAINER_WIDTH - (PADDING * 0.1); // Largura efetiva do SVG
-const MAP_HEIGHT = MAP_CONTAINER_HEIGHT - (PADDING * 2); // Altura efetiva do SVG
+const MAP_CONTAINER_WIDTH = SCREEN_WIDTH - 20;
+const MAP_CONTAINER_HEIGHT = SCREEN_HEIGHT * 0.62;
+const PADDING = 20;
+const MAP_WIDTH = MAP_CONTAINER_WIDTH - (PADDING * 0.1);
+const MAP_HEIGHT = MAP_CONTAINER_HEIGHT - (PADDING * 2);
 
 interface InteractiveMapProps {
   geoJsonData: any;
@@ -20,6 +26,14 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
   const [bounds, setBounds] = useState({ minLat: 0, maxLat: 0, minLon: 0, maxLon: 0 });
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Shared values para animação de zoom e pan
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
 
   useEffect(() => {
     try {
@@ -71,15 +85,16 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
         }
       });
 
-      const latPadding = (maxLat - minLat) * 0.02; 
-      const lonPadding = (maxLon - minLon) * 0.02;
+      // Reduzir padding para mapa ficar maior
+      const latPadding = (maxLat - minLat) * 0.01; // Reduzido para ter menos margem
+      const lonPadding = (maxLon - minLon) * 0.01;
 
       minLat -= latPadding;
       maxLat += latPadding;
       minLon -= lonPadding;
       maxLon += lonPadding;
 
-      console.log('📐 Bounds calculados:', { minLat, maxLat, minLon, maxLon });
+      console.log('🔍 Bounds calculados:', { minLat, maxLat, minLon, maxLon });
       setBounds({ minLat, maxLat, minLon, maxLon });
     } catch (err) {
       console.error('❌ Erro ao calcular bounds:', err);
@@ -100,17 +115,26 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
     const dataAspect = dataWidth / dataHeight;
     const containerAspect = MAP_WIDTH / MAP_HEIGHT;
     
-    let scale, offsetX = 40, offsetY = 10;
+    // Offsets base (você pode ajustar esses valores)
+    let offsetX = 5;
+    let offsetY = -90; // Ajuste vertical (negativo = sobe, positivo = desce)
+    
+    // Fator de aumento do mapa (1.0 = tamanho original, 1.3 = 30% maior)
+    const enlargeFactor = 1.3;
+    
+    let scale;
     
     // Ajustar para preencher o container mantendo proporção
     if (dataAspect > containerAspect) {
       // Dados são mais largos - ajustar pela largura
-      scale = MAP_WIDTH / dataWidth;
-      offsetY = (MAP_HEIGHT - (dataHeight * scale)) / 3;
+      scale = (MAP_WIDTH / dataWidth) * enlargeFactor;
+      // Centralizar verticalmente + offset customizado
+      offsetY += (MAP_HEIGHT - (dataHeight * scale)) / 2;
     } else {
       // Dados são mais altos - ajustar pela altura
-      scale = MAP_HEIGHT / dataHeight;
-      offsetX = (MAP_WIDTH - (dataWidth * scale)) / 2;
+      scale = (MAP_HEIGHT / dataHeight) * enlargeFactor;
+      // Centralizar horizontalmente + offset customizado
+      offsetX += (MAP_WIDTH - (dataWidth * scale)) / 2;
     }
     
     const x = ((lon - minLon) * scale) + offsetX;
@@ -141,11 +165,83 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
 
   const handleRegionPress = (regionName: string) => {
     console.log('🗺️ Região clicada:', regionName);
-    setSelectedRegion(regionName);
+    
+    // Toggle: se já está selecionada, desseleciona; senão, seleciona
+    if (selectedRegion === regionName) {
+      setSelectedRegion(null);
+      console.log('🗺️ Região desmarcada:', regionName);
+    } else {
+      setSelectedRegion(regionName);
+      console.log('🗺️ Região marcada:', regionName);
+    }
+    
     if (onRegionPress) {
       onRegionPress(regionName);
     }
   };
+
+  // Gesto de pinça para zoom
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((event) => {
+      scale.value = savedScale.value * event.scale;
+      // Limitar o zoom entre 1x e 5x
+      scale.value = Math.max(1, Math.min(scale.value, 5));
+    })
+    .onEnd(() => {
+      savedScale.value = scale.value;
+    });
+
+  // Gesto de pan (arrastar)
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      // Calcular os limites de pan baseado no zoom atual
+      const maxTranslateX = (MAP_WIDTH * (scale.value - 1)) / 2;
+      const maxTranslateY = (MAP_HEIGHT * (scale.value - 1)) / 2;
+
+      // Aplicar translação com limites
+      translateX.value = Math.max(
+        -maxTranslateX,
+        Math.min(maxTranslateX, savedTranslateX.value + event.translationX)
+      );
+      translateY.value = Math.max(
+        -maxTranslateY,
+        Math.min(maxTranslateY, savedTranslateY.value + event.translationY)
+      );
+    })
+    .onEnd(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    });
+
+  // Gesto de toque duplo para resetar zoom
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      scale.value = withTiming(1, { duration: 300 });
+      savedScale.value = 1;
+      translateX.value = withTiming(0, { duration: 300 });
+      translateY.value = withTiming(0, { duration: 300 });
+      savedTranslateX.value = 0;
+      savedTranslateY.value = 0;
+    });
+
+  // Combinar os gestos
+  const composedGesture = Gesture.Simultaneous(
+    pinchGesture,
+    panGesture,
+    doubleTapGesture
+  );
+
+  // Estilo animado para o SVG
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value },
+      ],
+    };
+  });
 
   if (!isReady) {
     return (
@@ -169,32 +265,36 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
     return (
       <View style={styles.container}>
         <View style={styles.mapBorder}>
-          <Svg width={MAP_WIDTH} height={MAP_HEIGHT} viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}>
-            <G>
-              {geoJsonData.features.map((feature: any, index: number) => {
-                try {
-                  const isSelected = selectedRegion === feature.properties.name;
-                  const pathData = coordinatesToPath(feature.geometry);
-                  
-                  if (!pathData) return null;
-                  
-                  return (
-                    <Path
-                      key={`region-${index}`}
-                      d={pathData}
-                      fill={isSelected ? '#2B5D36' : '#D3D3D3'}
-                      stroke="#FFFFFF"
-                      strokeWidth="2"
-                      onPress={() => handleRegionPress(feature.properties.name)}
-                    />
-                  );
-                } catch (err) {
-                  console.warn('⚠️ Erro ao renderizar região:', err);
-                  return null;
-                }
-              })}
-            </G>
-          </Svg>
+          <GestureDetector gesture={composedGesture}>
+            <Animated.View style={[{ width: MAP_WIDTH, height: MAP_HEIGHT }, animatedStyle]}>
+              <Svg width={MAP_WIDTH} height={MAP_HEIGHT} viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}>
+                <G>
+                  {geoJsonData.features.map((feature: any, index: number) => {
+                    try {
+                      const isSelected = selectedRegion === feature.properties.name;
+                      const pathData = coordinatesToPath(feature.geometry);
+                      
+                      if (!pathData) return null;
+                      
+                      return (
+                        <Path
+                          key={`region-${index}`}
+                          d={pathData}
+                          fill={isSelected ? '#2B5D36' : '#D3D3D3'}
+                          stroke="#FFFFFF"
+                          strokeWidth="2"
+                          onPress={() => handleRegionPress(feature.properties.name)}
+                        />
+                      );
+                    } catch (err) {
+                      console.warn('⚠️ Erro ao renderizar região:', err);
+                      return null;
+                    }
+                  })}
+                </G>
+              </Svg>
+            </Animated.View>
+          </GestureDetector>
         </View>
 
         {selectedRegion && (
@@ -235,6 +335,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    overflow: 'hidden',
   },
   loadingContainer: {
     width: MAP_CONTAINER_WIDTH,

@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler'; // ADICIONE ESTA LINHA
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Importar o GeoJSON
@@ -65,12 +66,6 @@ const HomeScreen: React.FC = () => {
   const handleMapRegionPress = (regionName: string) => {
     console.log('Região clicada:', regionName);
     setSelectedMapRegion(regionName);
-    
-    // Aqui você pode:
-    // 1. Filtrar dados baseado na região
-    // 2. Mostrar estatísticas da região
-    // 3. Abrir um modal com detalhes
-    // 4. Atualizar gráficos
   };
 
   // Abre o painel de filtros
@@ -98,25 +93,15 @@ const HomeScreen: React.FC = () => {
   // Aplicar filtros
   const applyFilters = () => {
     console.log('Filtros aplicados:', filters);
-    
-    // Aqui você pode:
-    // 1. Fazer requisição à API com os filtros
-    // 2. Atualizar o estado global (Context/Redux)
-    // 3. Filtrar dados locais
-    
-    // Exemplo de como usar os filtros em uma requisição:
     fetchDashboardData(filters);
-    
     closeFilters();
   };
 
   // Função exemplo para buscar dados com filtros
   const fetchDashboardData = async (appliedFilters: Filters) => {
     try {
-      // Construir query string com os filtros
       const queryParams = new URLSearchParams();
       
-      // Adicionar cada categoria de filtro
       appliedFilters.mesorregiao.forEach(m => queryParams.append('mesorregiao', m));
       appliedFilters.sexo.forEach(s => queryParams.append('sexo', s));
       appliedFilters.idade.forEach(i => queryParams.append('idade', i));
@@ -125,11 +110,6 @@ const HomeScreen: React.FC = () => {
 
       console.log('Query params:', queryParams.toString());
       
-      // Exemplo de requisição à API
-      // const response = await fetch(`http://10.0.2.2:8080/api/dashboard?${queryParams}`);
-      // const data = await response.json();
-      // setDashboardData(data);
-      
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
     }
@@ -137,390 +117,241 @@ const HomeScreen: React.FC = () => {
 
   return (
     <ProtectedRoute>
-      <SafeAreaView style={homeStyles.container} edges={['bottom']}>
-        {/* Header com menu lateral */}
-        <AppHeader showMenuButton={true} showStatsButton={true} />
+      {/* ENVOLVA TODO O CONTEÚDO COM GestureHandlerRootView */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaView style={homeStyles.container} edges={['bottom']}>
+          {/* Header com menu lateral */}
+          <AppHeader showMenuButton={true} showStatsButton={true} />
 
-        {/* Conteúdo da tela */}
-        <View style={homeStyles.content}>
-          {/* Botão de estatísticas flutuante (canto superior direito) */}
-          <TouchableOpacity style={homeStyles.floatingStatsButton}>
-            <Image
-                source={require('@/assets/images/dashboard_btn.png')}
-                //style={styles.menuIcon}
-                resizeMode="contain"
-            />
-          </TouchableOpacity>
+          {/* Conteúdo da tela */}
+          <View style={homeStyles.content}>
+            {/* Botão de estatísticas flutuante (canto superior direito) */}
+            <TouchableOpacity style={homeStyles.floatingStatsButton}>
+              <Image
+                  source={require('@/assets/images/dashboard_btn.png')}
+                  resizeMode="contain"
+              />
+            </TouchableOpacity>
 
-           {/* Área do Mapa com ScrollView */}
-          <ScrollView 
-            style={homeStyles.mapContainer}
-            contentContainerStyle={{ paddingVertical: 20 }}
-          >
-            <InteractiveMap 
-              geoJsonData={geoJsonData}
-              onRegionPress={handleMapRegionPress}
-            />
-          </ScrollView>
-          
-          {/* Botão Filtros */}
-          <TouchableOpacity
-            style={homeStyles.filterButton}
-            onPress={openFilters}
-            activeOpacity={0.8}
-          >
-            <View style={homeStyles.filterButtonContent}>
-              <Text style={homeStyles.filterButtonIcon}>^</Text>
-              <Text style={homeStyles.filterButtonText}>FILTROS</Text>
-              <Text style={homeStyles.filterButtonIcon}>^</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Modal de Filtros */}
-        <Modal
-          visible={filterVisible}
-          transparent
-          animationType="none"
-          onRequestClose={closeFilters}
-        >
-          {/* Overlay escuro */}
-          <TouchableOpacity
-            style={homeStyles.modalOverlay}
-            activeOpacity={1}
-            onPress={closeFilters}
-          >
-            {/* Painel de Filtros */}
-            <Animated.View
-              style={[
-                homeStyles.filterPanel,
-                {
-                  transform: [{ translateY: slideUpAnim }],
-                },
-              ]}
-              onStartShouldSetResponder={() => true}
+            {/* Área do Mapa com ScrollView */}
+            <ScrollView 
+              style={homeStyles.mapContainer}
+              contentContainerStyle={{ paddingVertical: 20 }}
             >
-              {/* Header do Filtro */}
-              <TouchableOpacity onPress={closeFilters}>
-              <View style={homeStyles.filterHeader}>
-                  <Text style={homeStyles.filterHeaderIcon}>ˇ</Text>
-                  <Text style={homeStyles.filterTitle}>FILTROS</Text>
-                  <Text style={homeStyles.filterHeaderIcon}>ˇ</Text>
+              <InteractiveMap 
+                geoJsonData={geoJsonData}
+                onRegionPress={handleMapRegionPress}
+              />
+            </ScrollView>
+            
+            {/* Botão Filtros */}
+            <TouchableOpacity
+              style={homeStyles.filterButton}
+              onPress={openFilters}
+              activeOpacity={0.8}
+            >
+              <View style={homeStyles.filterButtonContent}>
+                <Text style={homeStyles.filterButtonIcon}>^</Text>
+                <Text style={homeStyles.filterButtonText}>FILTROS</Text>
+                <Text style={homeStyles.filterButtonIcon}>^</Text>
               </View>
-              </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
 
-
-              {/* <View style={homeStyles.filterHeader}>
+          {/* Modal de Filtros */}
+          <Modal
+            visible={filterVisible}
+            transparent
+            animationType="none"
+            onRequestClose={closeFilters}
+          >
+            {/* Overlay escuro */}
+            <TouchableOpacity
+              style={homeStyles.modalOverlay}
+              activeOpacity={1}
+              onPress={closeFilters}
+            >
+              {/* Painel de Filtros */}
+              <Animated.View
+                style={[
+                  homeStyles.filterPanel,
+                  {
+                    transform: [{ translateY: slideUpAnim }],
+                  },
+                ]}
+                onStartShouldSetResponder={() => true}
+              >
+                {/* Header do Filtro */}
                 <TouchableOpacity onPress={closeFilters}>
-                  <Text style={homeStyles.filterHeaderIcon}>ˇ</Text>
+                  <View style={homeStyles.filterHeader}>
+                    <Text style={homeStyles.filterHeaderIcon}>ˇ</Text>
+                    <Text style={homeStyles.filterTitle}>FILTROS</Text>
+                    <Text style={homeStyles.filterHeaderIcon}>ˇ</Text>
+                  </View>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={closeFilters}>
-                  <Text style={homeStyles.filterTitle}>FILTROS</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={closeFilters}>
-                  <Text style={homeStyles.filterHeaderIcon}>ˇ</Text>
-                </TouchableOpacity>
-              </View> */}
 
-              {/* Conteúdo dos Filtros */}
-              <ScrollView style={homeStyles.filterContent}>
-                {/* Container de duas colunas */}
-                <View style={homeStyles.filterColumnsContainer}>
-                  {/* COLUNA ESQUERDA */}
-                  <View style={homeStyles.filterColumn}>
-                    {/* Mesorregião */}
-                    <View style={homeStyles.filterSection}>
-                      <Text style={homeStyles.filterSectionTitle}>Mesorregião</Text>
-                      <View style={homeStyles.checkboxGroup}>
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('mesorregiao', 'Sertão')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('mesorregiao', 'Sertão') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('mesorregiao', 'Sertão') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>Sertão 📋</Text>
-                        </TouchableOpacity>
+                {/* Conteúdo dos Filtros */}
+                <ScrollView style={homeStyles.filterContent}>
+                  {/* Container de duas colunas */}
+                  <View style={homeStyles.filterColumnsContainer}>
+                    {/* COLUNA ESQUERDA */}
+                    <View style={homeStyles.filterColumn}>
+                      {/* Mesorregião */}
+                      <View style={homeStyles.filterSection}>
+                        <Text style={homeStyles.filterSectionTitle}>Mesorregião</Text>
+                        <View style={homeStyles.checkboxGroup}>
+                          {['Sertão', 'São Francisco', 'Agreste', 'Mata', 'Metropolitana'].map((regiao) => (
+                            <TouchableOpacity
+                              key={regiao}
+                              style={homeStyles.checkboxItem}
+                              onPress={() => toggleFilter('mesorregiao', regiao)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={[
+                                homeStyles.checkbox,
+                                isFilterChecked('mesorregiao', regiao) && homeStyles.checkboxChecked
+                              ]}>
+                                {isFilterChecked('mesorregiao', regiao) && (
+                                  <Text style={homeStyles.checkboxCheck}>✓</Text>
+                                )}
+                              </View>
+                              <Text style={homeStyles.checkboxLabel}>{regiao} 📋</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
 
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('mesorregiao', 'São Francisco')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('mesorregiao', 'São Francisco') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('mesorregiao', 'São Francisco') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>São Francisco 📋</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('mesorregiao', 'Agreste')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('mesorregiao', 'Agreste') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('mesorregiao', 'Agreste') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>Agreste 📋</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('mesorregiao', 'Mata')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('mesorregiao', 'Mata') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('mesorregiao', 'Mata') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>Mata 📋</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('mesorregiao', 'Metropolitana')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('mesorregiao', 'Metropolitana') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('mesorregiao', 'Metropolitana') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>Metropolitana 📋</Text>
-                        </TouchableOpacity>
+                      {/* Idade */}
+                      <View style={homeStyles.filterSection}>
+                        <Text style={homeStyles.filterSectionTitle}>Idade</Text>
+                        <View style={homeStyles.checkboxGroup}>
+                          {[
+                            { value: '14-15', label: '14 aos 15 anos 👦' },
+                            { value: '16-17', label: '16 aos 17 anos 👨' },
+                            { value: '18-19', label: '18 aos 19 anos 🧑' }
+                          ].map(({ value, label }) => (
+                            <TouchableOpacity
+                              key={value}
+                              style={homeStyles.checkboxItem}
+                              onPress={() => toggleFilter('idade', value)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={[
+                                homeStyles.checkbox,
+                                isFilterChecked('idade', value) && homeStyles.checkboxChecked
+                              ]}>
+                                {isFilterChecked('idade', value) && (
+                                  <Text style={homeStyles.checkboxCheck}>✓</Text>
+                                )}
+                              </View>
+                              <Text style={homeStyles.checkboxLabel}>{label}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
                       </View>
                     </View>
 
-                    {/* Idade */}
-                    <View style={homeStyles.filterSection}>
-                      <Text style={homeStyles.filterSectionTitle}>Idade</Text>
-                      <View style={homeStyles.checkboxGroup}>
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('idade', '14-15')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('idade', '14-15') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('idade', '14-15') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>14 aos 15 anos 👦</Text>
-                        </TouchableOpacity>
+                    {/* COLUNA DIREITA */}
+                    <View style={homeStyles.filterColumn}>
+                      {/* Sexo */}
+                      <View style={homeStyles.filterSection}>
+                        <Text style={homeStyles.filterSectionTitle}>Sexo</Text>
+                        <View style={homeStyles.checkboxGroup}>
+                          {[
+                            { value: 'Masculino', label: 'Masculino ♂' },
+                            { value: 'Feminino', label: 'Feminino ♀' }
+                          ].map(({ value, label }) => (
+                            <TouchableOpacity
+                              key={value}
+                              style={homeStyles.checkboxItem}
+                              onPress={() => toggleFilter('sexo', value)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={[
+                                homeStyles.checkbox,
+                                isFilterChecked('sexo', value) && homeStyles.checkboxChecked
+                              ]}>
+                                {isFilterChecked('sexo', value) && (
+                                  <Text style={homeStyles.checkboxCheck}>✓</Text>
+                                )}
+                              </View>
+                              <Text style={homeStyles.checkboxLabel}>{label}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
 
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('idade', '16-17')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('idade', '16-17') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('idade', '16-17') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>16 aos 17 anos 👨</Text>
-                        </TouchableOpacity>
+                      {/* Ano da pesquisa */}
+                      <View style={homeStyles.filterSection}>
+                        <Text style={homeStyles.filterSectionTitle}>Ano da pesquisa</Text>
+                        <View style={homeStyles.checkboxGroup}>
+                          {['2016', '2022'].map((ano) => (
+                            <TouchableOpacity
+                              key={ano}
+                              style={homeStyles.checkboxItem}
+                              onPress={() => toggleFilter('anoPesquisa', ano)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={[
+                                homeStyles.checkbox,
+                                isFilterChecked('anoPesquisa', ano) && homeStyles.checkboxChecked
+                              ]}>
+                                {isFilterChecked('anoPesquisa', ano) && (
+                                  <Text style={homeStyles.checkboxCheck}>✓</Text>
+                                )}
+                              </View>
+                              <Text style={homeStyles.checkboxLabel}>{ano} 📋</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
 
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('idade', '18-19')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('idade', '18-19') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('idade', '18-19') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>18 aos 19 anos 🧑</Text>
-                        </TouchableOpacity>
+                      {/* Série */}
+                      <View style={homeStyles.filterSection}>
+                        <Text style={homeStyles.filterSectionTitle}>Série</Text>
+                        <View style={homeStyles.checkboxGroup}>
+                          {['1', '2', '3'].map((serie) => (
+                            <TouchableOpacity
+                              key={serie}
+                              style={homeStyles.checkboxItem}
+                              onPress={() => toggleFilter('serie', serie)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={[
+                                homeStyles.checkbox,
+                                isFilterChecked('serie', serie) && homeStyles.checkboxChecked
+                              ]}>
+                                {isFilterChecked('serie', serie) && (
+                                  <Text style={homeStyles.checkboxCheck}>✓</Text>
+                                )}
+                              </View>
+                              <Text style={homeStyles.checkboxLabel}>{serie}ª Série 📋</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
                       </View>
                     </View>
                   </View>
 
-                  {/* COLUNA DIREITA */}
-                  <View style={homeStyles.filterColumn}>
-                    {/* Sexo */}
-                    <View style={homeStyles.filterSection}>
-                      <Text style={homeStyles.filterSectionTitle}>Sexo</Text>
-                      <View style={homeStyles.checkboxGroup}>
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('sexo', 'Masculino')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('sexo', 'Masculino') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('sexo', 'Masculino') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>Masculino ♂</Text>
-                        </TouchableOpacity>
+                  {/* Espaçamento final */}
+                  <View style={{ height: 100 }} />
+                </ScrollView>
 
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('sexo', 'Feminino')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('sexo', 'Feminino') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('sexo', 'Feminino') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>Feminino ♀</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* Ano da pesquisa */}
-                    <View style={homeStyles.filterSection}>
-                      <Text style={homeStyles.filterSectionTitle}>Ano da pesquisa</Text>
-                      <View style={homeStyles.checkboxGroup}>
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('anoPesquisa', '2016')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('anoPesquisa', '2016') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('anoPesquisa', '2016') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>2016 📋</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('anoPesquisa', '2022')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('anoPesquisa', '2022') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('anoPesquisa', '2022') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>2022 📋</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* Série */}
-                    <View style={homeStyles.filterSection}>
-                      <Text style={homeStyles.filterSectionTitle}>Série</Text>
-                      <View style={homeStyles.checkboxGroup}>
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('serie', '1')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('serie', '1') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('serie', '1') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>1ª Série 📋</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('serie', '2')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('serie', '2') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('serie', '2') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>2ª Série 📋</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={homeStyles.checkboxItem}
-                          onPress={() => toggleFilter('serie', '3')}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[
-                            homeStyles.checkbox,
-                            isFilterChecked('serie', '3') && homeStyles.checkboxChecked
-                          ]}>
-                            {isFilterChecked('serie', '3') && (
-                              <Text style={homeStyles.checkboxCheck}>✓</Text>
-                            )}
-                          </View>
-                          <Text style={homeStyles.checkboxLabel}>3ª Série 📋</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
+                {/* Botão Aplicar Filtros */}
+                <View style={homeStyles.filterFooter}>
+                  <TouchableOpacity
+                    style={homeStyles.applyButton}
+                    onPress={applyFilters}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={homeStyles.applyButtonText}>Aplicar filtros</Text>
+                  </TouchableOpacity>
                 </View>
-
-                {/* Espaçamento final */}
-                <View style={{ height: 100 }} />
-              </ScrollView>
-
-              {/* Botão Aplicar Filtros */}
-              <View style={homeStyles.filterFooter}>
-                <TouchableOpacity
-                  style={homeStyles.applyButton}
-                  onPress={applyFilters}
-                  activeOpacity={0.8}
-                >
-                  <Text style={homeStyles.applyButtonText}>Aplicar filtros</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          </TouchableOpacity>
-        </Modal>
-      </SafeAreaView>
+              </Animated.View>
+            </TouchableOpacity>
+          </Modal>
+        </SafeAreaView>
+      </GestureHandlerRootView>
     </ProtectedRoute>
   );
 };
