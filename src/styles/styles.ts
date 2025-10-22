@@ -1,9 +1,11 @@
 // src/styles/styles.ts
-import { StyleSheet } from 'react-native';
+import { Dimensions, StyleSheet } from 'react-native';
+
+const { height } = Dimensions.get('window');
 
 // Cores do projeto
 export const colors = {
-  primary: '#27ae60',
+  primary: '#28783A',
   primaryDisabled: '#95a5a6',
   secondary: '#d4af37',
   secondaryBorder: '#b8941f',
@@ -262,5 +264,204 @@ export const globalStyles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text.primary,
     marginBottom: 8,
+  },
+});
+
+// Constantes para Home
+export const FILTER_PANEL_HEIGHT = height * 0.65;
+
+// Estilos da tela Home
+export const homeStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    flex: 1,
+    position: 'relative',
+  },
+
+  // Botão flutuante de estatísticas
+  floatingStatsButton: {
+    position: 'absolute',
+    top: 15,
+    right: 0,
+    width: 56,
+    height: 56,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+
+  // Retângulo do Mapa
+  mapContainer: {
+    flex: 1,
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+
+  // Botão Filtros
+  filterButton: {
+    backgroundColor: colors.white,
+    marginHorizontal: 10,
+    marginBottom: 20,
+    paddingVertical: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  filterButtonContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  filterButtonIcon: {
+    fontSize: 20,
+    color: colors.text.primary,
+    marginHorizontal: 15,
+    fontWeight: 'bold',
+  },
+  filterButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    letterSpacing: 1,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+
+  // Painel de Filtros
+  filterPanel: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: FILTER_PANEL_HEIGHT,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+
+  // Header do Filtro
+  filterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.default,
+  },
+  filterHeaderIcon: {
+    fontSize: 28,
+    color: colors.text.primary,
+    fontWeight: 'bold',
+  },
+  filterTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    letterSpacing: 1,
+  },
+
+  // Conteúdo dos Filtros
+  filterContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+
+  // Container de duas colunas
+  filterColumnsContainer: {
+    flexDirection: 'row',
+    gap: 15,
+    marginTop: 20,
+  },
+
+  filterColumn: {
+    flex: 1,
+  },
+
+  // Seção de Filtro
+  filterSection: {
+    marginBottom: 20,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginBottom: 12,
+  },
+
+  // Grupo de Checkboxes
+  checkboxGroup: {
+    gap: 12,
+  },
+  checkboxItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderColor: colors.text.secondary,
+    borderRadius: 4,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkboxCheck: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    color: colors.text.primary,
+    flexShrink: 1,
+  },
+
+  // Footer com Botão Aplicar
+  filterFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.default,
+    backgroundColor: colors.white,
+  },
+  applyButton: {
+    marginHorizontal: 80,
+    marginBottom: 10,
+    paddingVertical: 15,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

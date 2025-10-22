@@ -29,9 +29,7 @@ const USER_KEY = 'user_data';
 
 // ✅ URL base da API (ALTERE PARA SEU IP LOCAL)
 // Exemplo: 'http://192.168.1.100:3000' ou 'http://localhost:3000'
-const API_BASE_URL = 'http://10.0.2.2:8080';
-
-
+const API_BASE_URL = 'http://10.183.185.240:8080';
 
 
 class AuthService {

@@ -115,10 +115,10 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
 
   const handleGuestAccess = (): void => {
     // Navega para home sem autenticação (modo convidado)
-    router.replace('/home');
+    router.replace('/cards');
   };
 
-  return (
+ return (
     <AuthLayout isLoading={loading}>
       {/* Campo Email */}
       <View style={loginStyles.inputContainer}>
