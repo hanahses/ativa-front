@@ -1,7 +1,9 @@
 // src/styles/styles.ts
 import { Dimensions, StyleSheet } from 'react-native';
 
-const { height } = Dimensions.get('window');
+const { height, width } = Dimensions.get('window');
+const HEADER_HEIGHT = 110; // Altura do header
+const STATS_PANEL_HEIGHT = height * 0.75; // 75% da altura da tela
 
 // Cores do projeto
 export const colors = {
@@ -464,4 +466,50 @@ export const homeStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+
+  // Overlay e painel de estatísticas
+  statsOverlay: {
+    flex: 1,
+    //backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+  },
+  statsPanel: {
+    position: 'absolute',
+    right: 0,
+    top: HEADER_HEIGHT + 15, // Começa um pouco abaixo do header
+    width: width * 0.83, // 85% da largura da tela
+    height: STATS_PANEL_HEIGHT, // Altura fixa em 75% da tela
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  statsPanelButtonContainer: {
+    position: 'absolute',
+    top: -95, // Posiciona acima do painel, alinhado com o botão original
+    left: 15,
+    zIndex: 10,
+  },
+  statsPanelButton: {
+    width: 56,
+    height: 56,
+    left:-( width * 0.83),
+    top: HEADER_HEIGHT + 15,
+    backgroundColor: colors.primary,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    // elevation: 5,
+  },
+
 });

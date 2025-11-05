@@ -11,9 +11,10 @@ import {
 
 // ✅ Imports tipados dos módulos criados
 import AuthLayout from '@/src/components/authLayout';
-import { colors, loginStyles } from '../../src/styles/styles';
-import { ERROR_MESSAGES } from '../../src/utils/constants';
-import { ValidationResult, validators } from '../../src/utils/validation';
+import { API_BASE_URL } from '@/src/services/authService';
+import { colors, loginStyles } from '@/src/styles/styles';
+import { ERROR_MESSAGES } from '@/src/utils/constants';
+import { ValidationResult, validators } from '@/src/utils/validation';
 
 // ✅ Interface para tipagem do componente
 interface RegisterScreenProps {}
@@ -93,11 +94,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = () => {
     setLoading(true);
     
     try {
-      console.log('🔍 Tentando cadastrar em:', 'http://10.0.2.2:8080/users/students/register');
+      console.log('🔍 Tentando cadastrar em:', `${API_BASE_URL}/users/students/register`);
       console.log('📋 Dados:', { name: name.trim(), email: email.trim() });
       
       // ✅ Tipagem explícita para a resposta da API
-      const response: Response = await fetch('http://10.0.2.2:8080/users/students/register', {
+      const response: Response = await fetch(`${API_BASE_URL}/users/students/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

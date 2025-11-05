@@ -29,12 +29,11 @@ const USER_KEY = 'user_data';
 
 // ✅ URL base da API (ALTERE PARA SEU IP LOCAL)
 // Exemplo: 'http://192.168.1.100:3000' ou 'http://localhost:3000'
-const API_BASE_URL = 'http://10.183.185.240:8080';
+export const API_BASE_URL = 'http://10.169.108.240:8080';
 
 
 class AuthService {
 
-  
   
   // ✅ Função para fazer login
   async login(email: string, password: string): Promise<LoginResponse> {
@@ -57,38 +56,40 @@ class AuthService {
     const data = await response.json();
     console.log('📦 Resposta:', data);
 
+    if (response.ok && data.access_token && data.refresh_token) {
+      // ✅ Salva os tokens de forma segura
+      await this.saveTokens(data.access_token, data.refresh_token);
 
-      if (response.ok && data.access_token && data.refresh_token) {
-        // ✅ Salva os tokens de forma segura
-        await this.saveTokens(data.access_token, data.refresh_token);
-        
-        // ✅ Salva os dados do usuário
-        if (data.user) {
-          await this.saveUserData(data.user);
-        }
+      // ✅ Salva os dados do usuário (mesmo que o backend não envie)
+      const userObject = {
+        email: email.trim(),
+        id: 'local', // opcional — pode remover se quiser
+        name: 'Usuário',
+      };
+      await this.saveUserData(userObject);
 
-        return {
-          success: true,
-          data: {
-            access_token: data.access_token,
-            refresh_token: data.refresh_token,
-            user: data.user,
-          },
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Erro ao fazer login',
-        };
-      }
-    } catch (error) {
-      console.error('Erro no login:', error);
+      return {
+        success: true,
+        data: {
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          user: userObject,
+        },
+      };
+    } else {
       return {
         success: false,
-        message: 'Erro de conexão com o servidor',
+        message: data.message || 'Erro ao fazer login',
       };
     }
+  } catch (error) {
+    console.error('Erro no login:', error);
+    return {
+      success: false,
+      message: 'Erro de conexão com o servidor',
+    };
   }
+}
 
   // ✅ Salva os tokens de forma segura usando SecureStore
   async saveTokens(access_token: string, refresh_token: string): Promise<void> {
