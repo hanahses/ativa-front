@@ -2,10 +2,12 @@
 import AppHeader from '@/src/components/header';
 import InteractiveMap from '@/src/components/interactiveMap';
 import ProtectedRoute from '@/src/components/protectedRoutes';
+import StatsPanel from '@/src/components/statsPanel';
 import { FILTER_PANEL_HEIGHT, homeStyles } from '@/src/styles/styles';
 import React, { useState } from 'react';
 import {
   Animated,
+  Dimensions,
   Image,
   Modal,
   ScrollView,
@@ -13,11 +15,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler'; // ADICIONE ESTA LINHA
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Importar o GeoJSON
 import geoJsonData from '@/assets/data/regioes.json';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const STATS_PANEL_WIDTH = SCREEN_WIDTH * 0.85;
 
 // Interface para os filtros
 interface Filters {
@@ -30,7 +35,9 @@ interface Filters {
 
 const HomeScreen: React.FC = () => {
   const [filterVisible, setFilterVisible] = useState(false);
+  const [statsVisible, setStatsVisible] = useState(false);
   const [slideUpAnim] = useState(new Animated.Value(FILTER_PANEL_HEIGHT));
+  const [slideRightAnim] = useState(new Animated.Value(STATS_PANEL_WIDTH));
   const [selectedMapRegion, setSelectedMapRegion] = useState<string | null>(null);
 
   // Estado dos filtros
@@ -66,6 +73,28 @@ const HomeScreen: React.FC = () => {
   const handleMapRegionPress = (regionName: string) => {
     console.log('Região clicada:', regionName);
     setSelectedMapRegion(regionName);
+  };
+
+  // Abre o painel de estatísticas
+  const openStats = () => {
+    setStatsVisible(true);
+    Animated.spring(slideRightAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 11,
+    }).start();
+  };
+
+  // Fecha o painel de estatísticas
+  const closeStats = () => {
+    Animated.timing(slideRightAnim, {
+      toValue: STATS_PANEL_WIDTH,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setStatsVisible(false);
+    });
   };
 
   // Abre o painel de filtros
@@ -117,7 +146,6 @@ const HomeScreen: React.FC = () => {
 
   return (
     <ProtectedRoute>
-      {/* ENVOLVA TODO O CONTEÚDO COM GestureHandlerRootView */}
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaView style={homeStyles.container} edges={['bottom']}>
           {/* Header com menu lateral */}
@@ -126,12 +154,17 @@ const HomeScreen: React.FC = () => {
           {/* Conteúdo da tela */}
           <View style={homeStyles.content}>
             {/* Botão de estatísticas flutuante (canto superior direito) */}
-            <TouchableOpacity style={homeStyles.floatingStatsButton}>
-              <Image
+              <TouchableOpacity 
+                style={homeStyles.floatingStatsButton}
+                onPress={openStats}
+                activeOpacity={0.8}
+              >
+                <Image
                   source={require('@/assets/images/dashboard_btn.png')}
                   resizeMode="contain"
-              />
-            </TouchableOpacity>
+                />
+              </TouchableOpacity>
+
 
             {/* Área do Mapa com ScrollView */}
             <ScrollView 
@@ -157,6 +190,42 @@ const HomeScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
           </View>
+
+          {/* Modal de Estatísticas */}
+          <Modal
+            visible={statsVisible}
+            transparent
+            animationType="none"
+            onRequestClose={closeStats}
+          >
+            <TouchableOpacity
+              style={homeStyles.statsOverlay}
+              activeOpacity={1}
+              onPress={closeStats}
+            >
+              <Animated.View
+                style={[
+                  homeStyles.statsPanel,
+                  {
+                    transform: [{ translateX: slideRightAnim }],
+                  },
+                ]}
+                onStartShouldSetResponder={() => true}
+              > 
+                <StatsPanel selectedRegion={selectedMapRegion} />
+              </Animated.View>
+
+              <Animated.View style = {[{transform: [{ translateX: slideRightAnim }]}]} >
+
+                <Image
+                    source={require('@/assets/images/dashboard_btn.png')}
+                    resizeMode="contain"
+                    style = {[homeStyles.statsPanelButton]}
+                />
+
+              </Animated.View>
+            </TouchableOpacity>
+          </Modal>
 
           {/* Modal de Filtros */}
           <Modal
