@@ -26,10 +26,9 @@ const STATS_PANEL_WIDTH = SCREEN_WIDTH * 0.85;
 
 // Interface para os filtros
 interface Filters {
-  mesorregiao: string[];
   sexo: string[];
-  idade: string[];
   anoPesquisa: string[];
+  idade: string[];
   serie: string[];
 }
 
@@ -42,10 +41,9 @@ const HomeScreen: React.FC = () => {
 
   // Estado dos filtros
   const [filters, setFilters] = useState<Filters>({
-    mesorregiao: ['Sertão', 'São Francisco', 'Agreste', 'Mata', 'Metropolitana'],
     sexo: ['Masculino', 'Feminino'],
-    idade: ['14-15', '16-17', '18-19'],
     anoPesquisa: ['2016', '2022'],
+    idade: ['14-15', '16-17', '18-19'],
     serie: ['1', '2', '3'],
   });
 
@@ -131,10 +129,9 @@ const HomeScreen: React.FC = () => {
     try {
       const queryParams = new URLSearchParams();
       
-      appliedFilters.mesorregiao.forEach(m => queryParams.append('mesorregiao', m));
       appliedFilters.sexo.forEach(s => queryParams.append('sexo', s));
-      appliedFilters.idade.forEach(i => queryParams.append('idade', i));
       appliedFilters.anoPesquisa.forEach(a => queryParams.append('ano', a));
+      appliedFilters.idade.forEach(i => queryParams.append('idade', i));
       appliedFilters.serie.forEach(s => queryParams.append('serie', s));
 
       console.log('Query params:', queryParams.toString());
@@ -265,26 +262,29 @@ const HomeScreen: React.FC = () => {
                   <View style={homeStyles.filterColumnsContainer}>
                     {/* COLUNA ESQUERDA */}
                     <View style={homeStyles.filterColumn}>
-                      {/* Mesorregião */}
+                      {/* Sexo */}
                       <View style={homeStyles.filterSection}>
-                        <Text style={homeStyles.filterSectionTitle}>Mesorregião</Text>
+                        <Text style={homeStyles.filterSectionTitle}>Sexo</Text>
                         <View style={homeStyles.checkboxGroup}>
-                          {['Sertão', 'São Francisco', 'Agreste', 'Mata', 'Metropolitana'].map((regiao) => (
+                          {[
+                            { value: 'Masculino', label: 'Masculino ♂' },
+                            { value: 'Feminino', label: 'Feminino ♀' }
+                          ].map(({ value, label }) => (
                             <TouchableOpacity
-                              key={regiao}
+                              key={value}
                               style={homeStyles.checkboxItem}
-                              onPress={() => toggleFilter('mesorregiao', regiao)}
+                              onPress={() => toggleFilter('sexo', value)}
                               activeOpacity={0.7}
                             >
                               <View style={[
                                 homeStyles.checkbox,
-                                isFilterChecked('mesorregiao', regiao) && homeStyles.checkboxChecked
+                                isFilterChecked('sexo', value) && homeStyles.checkboxChecked
                               ]}>
-                                {isFilterChecked('mesorregiao', regiao) && (
+                                {isFilterChecked('sexo', value) && (
                                   <Text style={homeStyles.checkboxCheck}>✓</Text>
                                 )}
                               </View>
-                              <Text style={homeStyles.checkboxLabel}>{regiao} 📋</Text>
+                              <Text style={homeStyles.checkboxLabel}>{label}</Text>
                             </TouchableOpacity>
                           ))}
                         </View>
@@ -322,34 +322,6 @@ const HomeScreen: React.FC = () => {
 
                     {/* COLUNA DIREITA */}
                     <View style={homeStyles.filterColumn}>
-                      {/* Sexo */}
-                      <View style={homeStyles.filterSection}>
-                        <Text style={homeStyles.filterSectionTitle}>Sexo</Text>
-                        <View style={homeStyles.checkboxGroup}>
-                          {[
-                            { value: 'Masculino', label: 'Masculino ♂' },
-                            { value: 'Feminino', label: 'Feminino ♀' }
-                          ].map(({ value, label }) => (
-                            <TouchableOpacity
-                              key={value}
-                              style={homeStyles.checkboxItem}
-                              onPress={() => toggleFilter('sexo', value)}
-                              activeOpacity={0.7}
-                            >
-                              <View style={[
-                                homeStyles.checkbox,
-                                isFilterChecked('sexo', value) && homeStyles.checkboxChecked
-                              ]}>
-                                {isFilterChecked('sexo', value) && (
-                                  <Text style={homeStyles.checkboxCheck}>✓</Text>
-                                )}
-                              </View>
-                              <Text style={homeStyles.checkboxLabel}>{label}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      </View>
-
                       {/* Ano da pesquisa */}
                       <View style={homeStyles.filterSection}>
                         <Text style={homeStyles.filterSectionTitle}>Ano da pesquisa</Text>

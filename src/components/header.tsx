@@ -160,7 +160,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
                 <TouchableOpacity
                   style={styles.topMenuItem}
-                  onPress={() => navigateFromTopMenu('/ranking')}
+                  onPress={() => navigateFromTopMenu('/studentsRanking')}
                 >
                   <Text style={styles.topMenuText}>Ranking</Text>
                 </TouchableOpacity>

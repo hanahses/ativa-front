@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderBottomLeftRadius: 10,
     backgroundColor: colors.primary,
-    height: '102%',
+    height: '100%',
   },
   scrollView: {
     flex: 1,

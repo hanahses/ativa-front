@@ -11,7 +11,7 @@ import {
 
 // ✅ Imports tipados dos módulos criados
 import AuthLayout from '@/src/components/authLayout';
-import authService from '../../src/services/authService';
+import { useAuth } from '@/src/context/authContext';
 import { colors, loginStyles } from '../../src/styles/styles';
 import { ERROR_MESSAGES } from '../../src/utils/constants';
 import { ValidationResult, validators } from '../../src/utils/validation';
@@ -26,6 +26,9 @@ type EmailState = string;
 type PasswordState = string;
 
 const LoginScreen: React.FC<LoginScreenProps> = () => {
+  // ✅ Hook do Context de Autenticação
+  const { login } = useAuth();
+
   // ✅ Estados tipados
   const [email, setEmail] = useState<EmailState>('');
   const [password, setPassword] = useState<PasswordState>('');
@@ -61,7 +64,7 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
     return isValid;
   };
 
-  // ✅ Função de login tipada
+  // ✅ Função de login tipada - ATUALIZADA para usar o Context
   const handleLogin = async (): Promise<void> => {
     // Primeiro valida os dados
     if (!validateForm()) {
@@ -71,12 +74,14 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
     setLoading(true);
     
     try {
-      // ✅ Usa o serviço de autenticação
-      const response = await authService.login(email, password);
+      console.log('🔐 Iniciando login via Context...');
+      
+      // ✅ Usa o login do Context (não mais o authService direto)
+      const response = await login(email, password);
 
-      if (response.success && response.data) {
+      if (response.success) {
         // ✅ Login bem-sucedido
-        console.log('Login bem-sucedido:', response.data);
+        console.log('✅ Login bem-sucedido! Perfil carregado no Context.');
         
         // ✅ Navega para a tela home (usando replace para não permitir voltar ao login)
         router.replace('/home');
@@ -86,7 +91,7 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
         Alert.alert('Erro no Login', errorMessage);
       }
     } catch (error: unknown) {
-      console.error('Erro no login:', error);
+      console.error('❌ Erro no login:', error);
       Alert.alert('Erro de Conexão', ERROR_MESSAGES.NETWORK_ERROR);
     } finally {
       setLoading(false);
