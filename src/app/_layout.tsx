@@ -69,6 +69,22 @@ export default function RootLayout() {
             headerShown: false 
           }} 
         />
+
+        {/* Tela de gerenciamento de ranking */}
+        <Stack.Screen 
+          name="studentsRanking" 
+          options={{ 
+            headerShown: false 
+          }} 
+        />
+
+        {/* Tela de visualização de rankings */}
+        <Stack.Screen 
+          name="rankingView" 
+          options={{ 
+            headerShown: false 
+          }} 
+        />
         
         {/* Adicionar outras telas aqui */}
       </Stack>

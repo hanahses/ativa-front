@@ -49,7 +49,8 @@ const REFRESH_TOKEN_KEY = 'refresh_token';
 const USER_PROFILE_KEY = 'user_profile';
 
 // ✅ URL base da API
-export const API_BASE_URL = 'http://10.64.27.208:8080';
+// vm = 38.242.202.155:8080
+export const API_BASE_URL = 'http://38.242.202.155:8080';
 
 class AuthService {
   

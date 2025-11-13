@@ -1,4 +1,3 @@
-
 // app/profile.tsx
 import AppHeader from '@/src/components/header';
 import ProtectedRoute from '@/src/components/protectedRoutes';
@@ -74,14 +73,23 @@ const ProfileScreen: React.FC = () => {
         setDisplayDate(date.toLocaleDateString('pt-BR'));
       }
 
-      // Dados do estudante
+      // Dados do estudante - com verificação de null
       if (userProfile.studentData) {
-        setWeight((userProfile.studentData.weightInGrams / 1000).toString());
-        setHeight(userProfile.studentData.heightInCm.toString());
+        // Verifica se weightInGrams não é null antes de converter
+        if (userProfile.studentData.weightInGrams != null) {
+          setWeight((userProfile.studentData.weightInGrams / 1000).toString());
+        }
         
-        // Converte gender de inglês para português
-        const genderPt = userProfile.studentData.gender === 'Male' ? 'Masculino' : 'Feminino';
-        setGender(genderPt);
+        // Verifica se heightInCm não é null antes de converter
+        if (userProfile.studentData.heightInCm != null) {
+          setHeight(userProfile.studentData.heightInCm.toString());
+        }
+        
+        // Converte gender de inglês para português se não for null
+        if (userProfile.studentData.gender) {
+          const genderPt = userProfile.studentData.gender === 'Male' ? 'Masculino' : 'Feminino';
+          setGender(genderPt);
+        }
       }
     }
   }, [userProfile]);

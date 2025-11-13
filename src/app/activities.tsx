@@ -429,13 +429,6 @@ const ActivitiesScreen: React.FC = () => {
       console.log('Dados de tempo de tela salvos:', screenTimeData);
       console.log('Dados de exercícios salvos:', exerciseData);
       
-      // Aqui você pode:
-      // 1. Salvar no AsyncStorage separadamente
-      // await AsyncStorage.setItem('screen_time_data', JSON.stringify(screenTimeData));
-      // await AsyncStorage.setItem('exercise_data', JSON.stringify(exerciseData));
-      // 2. Enviar para uma API
-      // 3. Salvar em Context/Redux
-      
       Alert.alert('Sucesso', 'Atividades registradas com sucesso!');
       
       // Resetar valores após salvar
