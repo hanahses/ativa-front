@@ -295,9 +295,18 @@ const StudentsRanking: React.FC = () => {
     setMyRankings([]);
   };
 
-  const handleRankingCardPress = (rankingId: string) => {
-    // Navegar para tela de detalhes do ranking
-    router.push(`/rankingView?id=${rankingId}`);
+const handleRankingCardPress = (ranking: Ranking) => {
+    // Navegar para tela de detalhes do ranking passando todos os dados necessários
+    console.log('Ranking selecionado:', ranking);
+    router.push({
+      pathname: '/rankingView',
+      params: {
+        id: ranking._id,
+        name: ranking.name,
+        startDate: ranking.startDate,
+        endDate: ranking.endDate,
+      }
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -368,7 +377,7 @@ const StudentsRanking: React.FC = () => {
                   <TouchableOpacity
                     key={ranking._id}
                     style={styles.rankingCard}
-                    onPress={() => handleRankingCardPress(ranking._id)}
+                    onPress={() => handleRankingCardPress(ranking)}
                     activeOpacity={0.7}
                   >
                     <View style={styles.rankingCardHeader}>

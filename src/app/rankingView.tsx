@@ -1,17 +1,18 @@
 // app/rankingView.tsx
 import AppHeader from '@/src/components/header';
 import ProtectedRoute from '@/src/components/protectedRoutes';
+import { useAuth } from '@/src/context/authContext';
 import { API_BASE_URL } from '@/src/services/authService';
 import { colors } from '@/src/styles/styles';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface Participant {
@@ -24,15 +25,18 @@ interface Participant {
 interface RankingData {
   name: string;
   participants: Participant[];
+  startDate: string;
+  endDate: string;
 }
 
 const RankingView: React.FC = () => {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { userProfile } = useAuth();
+  const { id, name, startDate, endDate } = useLocalSearchParams();
   
   const [rankingData, setRankingData] = useState<RankingData | null>(null);
-  const [rankingName, setRankingName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [showActivitiesMenu, setShowActivitiesMenu] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -44,20 +48,7 @@ const RankingView: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Primeiro busca informações básicas do ranking
-      const rankingResponse = await fetch(`${API_BASE_URL}/ranking/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (rankingResponse.ok) {
-        const rankingInfo = await rankingResponse.json();
-        setRankingName(rankingInfo.name);
-      }
-
-      // Depois busca o leaderboard
+      // Busca apenas o leaderboard, os dados básicos já vêm dos parâmetros
       const leaderboardResponse = await fetch(`${API_BASE_URL}/ranking/${id}/leaderboard`, {
         method: 'GET',
         headers: {
@@ -78,8 +69,10 @@ const RankingView: React.FC = () => {
         }));
         
         setRankingData({
-          name: rankingName,
+          name: typeof name === 'string' ? name : '',
           participants: participantsWithPosition,
+          startDate: typeof startDate === 'string' ? startDate : '',
+          endDate: typeof endDate === 'string' ? endDate : '',
         });
       } else {
         console.error('Erro ao carregar leaderboard');
@@ -111,18 +104,67 @@ const RankingView: React.FC = () => {
   const getPositionIcon = (position: number) => {
     switch (position) {
       case 1:
-        return '↑';
+        return '👑';
       case 2:
-        return '↓';
+        return '⭐';
       case 3:
-        return '↓';
+        return '⭐';
       default:
-        return position <= 5 ? '−' : position <= 10 ? '↓' : '↑';
+        return position <= 5 ? '∙' : position <= 10 ? '↑' : '↓';
     }
   };
 
   const handleBack = () => {
-    router.back();
+    if (showActivitiesMenu) {
+      // Se estiver no menu de atividades, volta para o leaderboard
+      setShowActivitiesMenu(false);
+    } else {
+      // Se estiver no leaderboard, volta para a tela anterior
+      router.back();
+    }
+  };
+
+  const handleActivitiesPress = () => {
+    const isTeacher = userProfile?.user?.role === 1;
+    
+    if (isTeacher) {
+      // Professor: mostra menu de opções
+      setShowActivitiesMenu(true);
+    } else {
+      // Aluno: vai direto para rankingActivities
+      router.push({
+        pathname: '/rankingActivities',
+        params: {
+          rankingId: id,
+          rankingName: name,
+        }
+      });
+    }
+  };
+
+  const handleCreateActivity = () => {
+    router.push({
+      pathname: '/createActivitie',
+      params: {
+        rankingId: id,
+        rankingName: name,
+      }
+    });
+  };
+
+  const handleViewActivities = () => {
+    router.push({
+      pathname: '/rankingActivities',
+      params: {
+        rankingId: id,
+        rankingName: name,
+      }
+    });
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
   };
 
   if (isLoading) {
@@ -169,92 +211,137 @@ const RankingView: React.FC = () => {
 
         {/* Título do Ranking */}
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>{rankingName || rankingData.name}</Text>
+          <Text style={styles.title}>{rankingData.name}</Text>
         </View>
 
-        {/* Lista de Participantes */}
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={true}
-        >
-          {rankingData.participants.map((participant) => (
-            <View
-              key={participant.userId}
-              style={[
-                styles.participantPill,
-                { backgroundColor: getPositionColor(participant.position) },
-              ]}
-            >
-              <View style={styles.positionContainer}>
-                <Text
-                  style={[
-                    styles.positionIcon,
-                    { color: getPositionTextColor(participant.position) },
-                  ]}
-                >
-                  {getPositionIcon(participant.position)}
-                </Text>
-                <Text
-                  style={[
-                    styles.positionNumber,
-                    { color: getPositionTextColor(participant.position) },
-                  ]}
-                >
-                  {participant.position}
-                </Text>
-              </View>
+        {/* Datas do Ranking */}
+        <View style={styles.datesContainer}>
+          <Text style={styles.dateText}>
+            Início: {formatDate(rankingData.startDate)}
+          </Text>
+          <Text style={styles.dateText}>
+            Fim: {formatDate(rankingData.endDate)}
+          </Text>
+        </View>
 
-              <View style={styles.avatarContainer}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {participant.userName.charAt(0).toUpperCase()}
+        {/* Conteúdo condicional: Leaderboard ou Menu de Atividades */}
+        {!showActivitiesMenu ? (
+          // Leaderboard
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
+          >
+            {rankingData.participants.map((participant) => (
+              <View
+                key={participant.userId}
+                style={[
+                  styles.participantPill,
+                  { backgroundColor: getPositionColor(participant.position) },
+                ]}
+              >
+                <View style={styles.positionContainer}>
+                  <Text
+                    style={[
+                      styles.positionIcon,
+                      { color: getPositionTextColor(participant.position) },
+                    ]}
+                  >
+                    {getPositionIcon(participant.position)}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.positionNumber,
+                      { color: getPositionTextColor(participant.position) },
+                    ]}
+                  >
+                    {participant.position}
+                  </Text>
+                </View>
+
+                <View style={styles.avatarContainer}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {participant.userName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.participantInfo}>
+                  <Text
+                    style={[
+                      styles.participantName,
+                      { color: getPositionTextColor(participant.position) },
+                    ]}
+                  >
+                    {participant.userName}
+                  </Text>
+                </View>
+
+                <View style={styles.pointsContainer}>
+                  <Text
+                    style={[
+                      styles.pointsValue,
+                      { color: getPositionTextColor(participant.position) },
+                    ]}
+                  >
+                    {participant.points}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.pointsLabel,
+                      { color: getPositionTextColor(participant.position) },
+                    ]}
+                  >
+                    pts.
                   </Text>
                 </View>
               </View>
+            ))}
 
-              <View style={styles.participantInfo}>
-                <Text
-                  style={[
-                    styles.participantName,
-                    { color: getPositionTextColor(participant.position) },
-                  ]}
-                >
-                  {participant.userName}
-                </Text>
-              </View>
+            {/* Botão "Ver todos" */}
+            {rankingData.participants.length > 10 && (
+              <TouchableOpacity style={styles.seeAllButton}>
+                <Text style={styles.seeAllText}>Ver todos ›</Text>
+              </TouchableOpacity>
+            )}
 
-              <View style={styles.pointsContainer}>
-                <Text
-                  style={[
-                    styles.pointsValue,
-                    { color: getPositionTextColor(participant.position) },
-                  ]}
-                >
-                  {participant.points}
-                </Text>
-                <Text
-                  style={[
-                    styles.pointsLabel,
-                    { color: getPositionTextColor(participant.position) },
-                  ]}
-                >
-                  pts.
-                </Text>
-              </View>
-            </View>
-          ))}
-
-          {/* Botão "Ver todos" */}
-          {rankingData.participants.length > 10 && (
-            <TouchableOpacity style={styles.seeAllButton}>
-              <Text style={styles.seeAllText}>Ver todos ›</Text>
+            {/* Espaçamento final */}
+            <View style={{ height: 20 }} />
+          </ScrollView>
+        ) : (
+          // Menu de Atividades (apenas para professores)
+          <View style={styles.activitiesMenuContainer}>
+            <TouchableOpacity 
+              style={styles.menuButton} 
+              onPress={handleCreateActivity}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.menuButtonText}>Criar Atividade</Text>
             </TouchableOpacity>
-          )}
 
-          {/* Espaçamento final */}
-          <View style={{ height: 20 }} />
-        </ScrollView>
+            <TouchableOpacity 
+              style={styles.menuButton} 
+              onPress={handleViewActivities}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.menuButtonText}>Ver Atividades</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Botão Atividades fixo na parte inferior - apenas quando não está no menu */}
+        {!showActivitiesMenu && (
+          <View style={styles.bottomButtonContainer}>
+            <TouchableOpacity 
+              style={styles.activitiesButton} 
+              onPress={handleActivitiesPress}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.activitiesButtonText}>Atividades</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </ProtectedRoute>
   );
@@ -312,14 +399,25 @@ const styles = StyleSheet.create({
   titleContainer: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: 10,
     alignItems: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: 25,
     fontWeight: 'bold',
     color: colors.text.primary,
     textAlign: 'center',
+  },
+  datesContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  dateText: {
+    fontSize: 14,
+    color: colors.text.primary,
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
@@ -402,6 +500,63 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2E7D32',
     fontWeight: '600',
+  },
+  bottomButtonContainer: {
+    paddingHorizontal: 50,
+    paddingVertical: 16,
+    paddingBottom: 50,
+    backgroundColor: colors.background,
+  },
+  activitiesButton: {
+    backgroundColor: '#2E7D32',
+    paddingVertical: 14,
+    paddingHorizontal: 50,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3.84,
+    elevation: 3,
+  },
+  activitiesButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  activitiesMenuContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  menuButton: {
+    backgroundColor: '#2E7D32',
+    paddingVertical: 14,
+    paddingHorizontal: 50,
+    borderRadius: 8,
+    marginVertical: 8,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 300,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3.84,
+    elevation: 3,
+  },
+  menuButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
