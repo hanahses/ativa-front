@@ -54,6 +54,17 @@ const RankingView: React.FC = () => {
   const [isCreatingActivity, setIsCreatingActivity] = useState(false);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showIntensityDropdown, setShowIntensityDropdown] = useState(false);
+  const [isSelectingParticipants, setIsSelectingParticipants] = useState(false);
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
+  const [tempModalData, setTempModalData] = useState({
+    type: '',
+    description: '',
+    date: new Date(),
+    displayDate: '',
+    hours: '',
+    minutes: '',
+    intensity: '',
+  });
 
   const activityTypes = ['Esporte', 'Corrida', 'Caminhada', 'Geral'];
   const intensityLevels = ['1', '2', '3'];
@@ -121,16 +132,16 @@ const RankingView: React.FC = () => {
   };
 
   const getPositionIcon = (position: number) => {
-    switch (position) {
-      case 1:
-        return '👑';
-      case 2:
-        return '⭐';
-      case 3:
-        return '⭐';
-      default:
-        return position <= 5 ? '∙' : position <= 10 ? '↑' : '↓';
-    }
+      switch (position) {
+        case 1:
+          return '👑';
+        case 2:
+          return '⭐';
+        case 3:
+          return '⭐';
+        default:
+          return '';
+      }
   };
 
   const handleBack = () => {
@@ -156,13 +167,11 @@ const RankingView: React.FC = () => {
   };
 
   const handleCreateActivity = () => {
-    router.push({
-      pathname: '/createActivitie',
-      params: {
-        rankingId: id,
-        rankingName: name,
-      }
-    });
+    if (!userProfile?.user?._id) {
+      Alert.alert('Erro', 'ID do professor não encontrado.');
+      return;
+    }
+    setCreateActivityModalVisible(true);
   };
 
   const handleViewActivities = () => {
@@ -175,12 +184,81 @@ const RankingView: React.FC = () => {
     });
   };
 
+  const handleToggleParticipant = (userId: string) => {
+    setSelectedParticipantIds(prev => {
+      if (prev.includes(userId)) {
+        return prev.filter(id => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
+
+  const handleOpenParticipantSelection = () => {
+    // Salva dados temporários do modal
+    setTempModalData({
+      type: activityType,
+      description: activityDescription,
+      date: activityDate,
+      displayDate: displayActivityDate,
+      hours: activityHours,
+      minutes: activityMinutes,
+      intensity: activityIntensity,
+    });
+    
+    // Fecha modal e ativa modo de seleção
+    setCreateActivityModalVisible(false);
+    setIsSelectingParticipants(true);
+    setShowActivitiesMenu(false);
+  };
+
+  const handleConfirmParticipantSelection = () => {
+    if (selectedParticipantIds.length === 0) {
+      Alert.alert('Atenção', 'Selecione pelo menos um participante.');
+      return;
+    }
+    
+    // Restaura dados do modal
+    setActivityType(tempModalData.type);
+    setActivityDescription(tempModalData.description);
+    setActivityDate(tempModalData.date);
+    setDisplayActivityDate(tempModalData.displayDate);
+    setActivityHours(tempModalData.hours);
+    setActivityMinutes(tempModalData.minutes);
+    setActivityIntensity(tempModalData.intensity);
+    
+    // Volta para o modal
+    setIsSelectingParticipants(false);
+    setCreateActivityModalVisible(true);
+  };
+
+  const handleCancelParticipantSelection = () => {
+    setSelectedParticipantIds([]);
+    setIsSelectingParticipants(false);
+    setCreateActivityModalVisible(true);
+  };
+
+  const handleSelectAllParticipants = () => {
+  if (!rankingData) return;
+  
+  const allIds = rankingData.participants.map(p => p.userId);
+  setSelectedParticipantIds(allIds);
+  };
+
   // Handlers para modal de criar atividade (aluno)
   const openCreateActivityModal = () => {
-    if (!userProfile?.studentData?.userId) {
+    const isTeacher = userProfile?.user?.role === 1;
+    
+    if (isTeacher && !userProfile?.user?._id) {
+      Alert.alert('Erro', 'ID do professor não encontrado.');
+      return;
+    }
+    
+    if (!isTeacher && !userProfile?.studentData?.userId) {
       Alert.alert('Erro', 'ID do estudante não encontrado.');
       return;
     }
+    
     setCreateActivityModalVisible(true);
   };
 
@@ -193,6 +271,8 @@ const RankingView: React.FC = () => {
     setActivityHours('');
     setActivityMinutes('');
     setActivityIntensity('');
+    setSelectedParticipantIds([]);
+    setIsSelectingParticipants(false);
   };
 
   const onActivityDateChange = (event: any, selectedDate?: Date) => {
@@ -306,6 +386,115 @@ const RankingView: React.FC = () => {
     }
   };
 
+  const handleCreateTeacherActivity = async () => {
+  // Validações
+  if (!activityType) {
+    Alert.alert('Atenção', 'Por favor, selecione o tipo de atividade.');
+    return;
+  }
+
+  if (!activityDescription.trim()) {
+    Alert.alert('Atenção', 'Por favor, insira uma descrição da atividade.');
+    return;
+  }
+
+  if (!displayActivityDate) {
+    Alert.alert('Atenção', 'Por favor, selecione a data de realização.');
+    return;
+  }
+
+  if (!activityHours && !activityMinutes) {
+    Alert.alert('Atenção', 'Por favor, informe o tempo de atividade.');
+    return;
+  }
+
+  const hours = parseInt(activityHours || '0');
+  const minutes = parseInt(activityMinutes || '0');
+
+  if (hours > 24 || (hours === 24 && minutes > 0)) {
+    Alert.alert('Atenção', 'A duração máxima é de 24 horas.');
+    return;
+  }
+
+  if (minutes > 59) {
+    Alert.alert('Atenção', 'Os minutos devem ser entre 0 e 59.');
+    return;
+  }
+
+  if (!activityIntensity) {
+    Alert.alert('Atenção', 'Por favor, selecione a intensidade da atividade.');
+    return;
+  }
+
+  if (selectedParticipantIds.length === 0) {
+    Alert.alert('Atenção', 'Por favor, selecione pelo menos um participante.');
+    return;
+  }
+
+  if (!id) {
+    Alert.alert('Erro', 'ID do ranking não encontrado.');
+    return;
+  }
+
+  setIsCreatingActivity(true);
+
+  try {
+    const timeSpentInSeconds = (hours * 3600) + (minutes * 60);
+    const intensityValue = parseInt(activityIntensity) - 1;
+
+    const payload = {
+      ocurredAt: activityDate.toISOString(),
+      type: activityType,
+      description: activityDescription.trim(),
+      timeSpentInSeconds: timeSpentInSeconds,
+      intesity: intensityValue,
+      participantIds: selectedParticipantIds,
+    };
+
+    console.log('Payload professor sendo enviado:', payload);
+
+    const teacherId = userProfile?.user?._id;
+
+    if (!teacherId) {
+      Alert.alert('Erro', 'ID do professor não encontrado.');
+      setIsCreatingActivity(false);
+      return;
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/activities/group/ranking/${id}/teacher/${teacherId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (response.ok) {
+      Alert.alert('Sucesso', 'Atividade criada com sucesso!');
+      closeCreateActivityModal();
+      setSelectedParticipantIds([]);
+    } else {
+      const error = await response.json();
+      const errorMessage =
+        typeof error.message === 'string'
+          ? error.message
+          : Array.isArray(error.message)
+            ? error.message.join(', ')
+            : 'Não foi possível criar a atividade.';
+
+      Alert.alert('Erro', errorMessage);
+    }
+    } catch (error) {
+      console.error('Erro ao criar atividade:', error);
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+    } finally {
+      setIsCreatingActivity(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR');
@@ -377,93 +566,109 @@ const RankingView: React.FC = () => {
             showsVerticalScrollIndicator={true}
           >
             {rankingData.participants.map((participant) => (
-              <View
+              <TouchableOpacity
                 key={participant.userId}
-                style={[
-                  styles.participantPill,
-                  { backgroundColor: getPositionColor(participant.position) },
-                ]}
+                onPress={() => isSelectingParticipants && handleToggleParticipant(participant.userId)}
+                disabled={!isSelectingParticipants}
+                activeOpacity={isSelectingParticipants ? 0.6 : 1}
               >
-                <View style={styles.positionContainer}>
-                  <Text
-                    style={[
-                      styles.positionIcon,
-                      { color: getPositionTextColor(participant.position) },
-                    ]}
-                  >
-                    {getPositionIcon(participant.position)}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.positionNumber,
-                      { color: getPositionTextColor(participant.position) },
-                    ]}
-                  >
-                    {participant.position}
-                  </Text>
-                </View>
-
-                <View style={styles.avatarContainer}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {participant.userName.charAt(0).toUpperCase()}
+                <View
+                  style={[
+                    styles.participantPill,
+                    { backgroundColor: getPositionColor(participant.position) },
+                  ]}
+                >
+                  <View style={styles.positionContainer}>
+                    <Text
+                      style={[
+                        styles.positionNumber,
+                        { color: getPositionTextColor(participant.position) },
+                      ]}
+                      >
+                      {participant.position}
                     </Text>
                   </View>
-                </View>
 
-                <View style={styles.participantInfo}>
-                  <Text
-                    style={[
-                      styles.participantName,
-                      { color: getPositionTextColor(participant.position) },
-                    ]}
-                  >
-                    {participant.userName}
-                  </Text>
-                </View>
+                  <View style={styles.avatarContainer}>
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>
+                        {participant.userName.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
 
-                <View style={styles.pointsContainer}>
-                  <Text
-                    style={[
-                      styles.pointsValue,
-                      { color: getPositionTextColor(participant.position) },
-                    ]}
-                  >
-                    {participant.points}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.pointsLabel,
-                      { color: getPositionTextColor(participant.position) },
-                    ]}
-                  >
-                    pts.
-                  </Text>
+                  <View style={styles.participantInfo}>
+                    <Text
+                      style={[
+                        styles.participantName,
+                        { color: getPositionTextColor(participant.position) },
+                      ]}
+                    >
+                      {participant.userName}
+                    </Text>
+                  </View>
+
+                  {isSelectingParticipants ? (
+                    <View style={styles.checkboxContainer}>
+                      <View style={[
+                        styles.checkbox,
+                        selectedParticipantIds.includes(participant.userId) && styles.checkboxChecked
+                      ]}>
+                        {selectedParticipantIds.includes(participant.userId) && (
+                          <Text style={styles.checkboxText}>✓</Text>
+                        )}
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.pointsContainer}>
+                      <Text
+                        style={[
+                          styles.pointsValue,
+                          { color: getPositionTextColor(participant.position) },
+                        ]}
+                      >
+                        {participant.points}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.pointsLabel,
+                          { color: getPositionTextColor(participant.position) },
+                        ]}
+                      >
+                        pts.
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
 
-            {/* Botão "Ver todos" */}
-            {rankingData.participants.length > 10 && (
-              <TouchableOpacity style={styles.seeAllButton}>
-                <Text style={styles.seeAllText}>Ver todos ›</Text>
+            {/* Botão Selecionar Todos - apenas durante seleção */}
+            {isSelectingParticipants && (
+              <TouchableOpacity 
+                style={styles.selectAllButton}
+                onPress={handleSelectAllParticipants}
+                activeOpacity={0.6}
+              >
+                <Text style={styles.selectAllText}>
+                  Selecionar Todos
+                </Text>
               </TouchableOpacity>
             )}
 
-            {/* Espaçamento final */}
             <View style={{ height: 20 }} />
           </ScrollView>
-        ) : (
+        ) : (        
+
           // Menu de Atividades
           <View style={styles.activitiesMenuContainer}>
+
             <TouchableOpacity 
               style={styles.menuButton} 
-              onPress={userProfile?.user?.role === 1 ? handleCreateActivity : openCreateActivityModal}
+              onPress={openCreateActivityModal}
               activeOpacity={0.8}
             >
-              <Text style={styles.menuButtonText}>
-                {userProfile?.user?.role === 1 ? 'Criar Atividade (Professor)' : 'Criar Atividade'}
-              </Text>
+              <Text style={styles.menuButtonText}>Criar Atividade</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -479,13 +684,35 @@ const RankingView: React.FC = () => {
         {/* Botão Atividades fixo na parte inferior - apenas quando não está no menu */}
         {!showActivitiesMenu && (
           <View style={styles.bottomButtonContainer}>
-            <TouchableOpacity 
-              style={styles.activitiesButton} 
-              onPress={handleActivitiesPress}
+            {isSelectingParticipants ? (
+            <View style={styles.selectionButtonsContainer}>
+              <TouchableOpacity 
+                style={[styles.selectionButton, styles.cancelSelectionButton]} 
+                onPress={handleCancelParticipantSelection}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.activitiesButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+              style={[styles.selectionButton, styles.confirmSelectionButton]} 
+              onPress={handleConfirmParticipantSelection}
               activeOpacity={0.8}
-            >
-              <Text style={styles.activitiesButtonText}>Atividades</Text>
-            </TouchableOpacity>
+              >
+              <View style={styles.selectionButtonContent}>
+                <Text style={styles.activitiesButtonText}>Selecionar</Text>
+                <Text style={styles.selectionCountBadge}>{selectedParticipantIds.length}</Text>
+              </View>
+              </TouchableOpacity>
+            </View>
+            ) : (
+              <TouchableOpacity 
+                style={styles.activitiesButton} 
+                onPress={handleActivitiesPress}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.activitiesButtonText}>Atividades</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -653,6 +880,25 @@ const RankingView: React.FC = () => {
                   </View>
                 )}
 
+                {/* Participantes Selecionados - apenas para professor */}
+                {userProfile?.user?.role === 1 && (
+                  <>
+                    <Text style={styles.inputLabel}>Participantes</Text>
+                    <TouchableOpacity 
+                      onPress={handleOpenParticipantSelection}
+                      disabled={isCreatingActivity}
+                      style={styles.selectParticipantsButton}
+                    >
+                      <Text style={styles.selectParticipantsButtonText}>
+                        {selectedParticipantIds.length > 0 
+                          ? `${selectedParticipantIds.length} participante(s) selecionado(s)` 
+                          : 'Selecionar Participantes'}
+                      </Text>
+                      <Text style={styles.selectParticipantsArrow}>›</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+
                 {/* Botões */}
                 <View style={styles.modalButtonContainer}>
                   <TouchableOpacity
@@ -664,16 +910,17 @@ const RankingView: React.FC = () => {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.modalButton, styles.confirmButton]}
-                    onPress={handleCreateStudentActivity}
-                    disabled={isCreatingActivity}
+                  style={[styles.modalButton, styles.confirmButton]}
+                  onPress={userProfile?.user?.role === 1 ? handleCreateTeacherActivity : handleCreateStudentActivity}
+                  disabled={isCreatingActivity}
                   >
-                    {isCreatingActivity ? (
-                      <ActivityIndicator size="small" color="#FFF" />
-                    ) : (
-                      <Text style={styles.confirmButtonText}>Criar</Text>
-                    )}
+                  {isCreatingActivity ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={styles.confirmButtonText}>Criar</Text>
+                  )}
                   </TouchableOpacity>
+
                 </View>
               </View>
             </ScrollView>
@@ -783,7 +1030,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 12,
-    minWidth: 40,
+    minWidth: 30,
+    justifyContent: 'center',
   },
   positionIcon: {
     fontSize: 14,
@@ -798,12 +1046,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  justifyContent: 'center',
+  alignItems: 'center',
   },
   avatarText: {
     fontSize: 16,
@@ -812,10 +1060,12 @@ const styles = StyleSheet.create({
   },
   participantInfo: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   participantName: {
     fontSize: 16,
     fontWeight: '600',
+    backgroundColor: 'transparent',
   },
   pointsContainer: {
     alignItems: 'flex-end',
@@ -828,21 +1078,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  seeAllButton: {
-    alignSelf: 'center',
-    marginTop: 10,
-    paddingVertical: 8,
-  },
-  seeAllText: {
-    fontSize: 16,
-    color: '#2E7D32',
-    fontWeight: '600',
-  },
   bottomButtonContainer: {
-    paddingHorizontal: 50,
-    paddingVertical: 16,
-    paddingBottom: 50,
-    backgroundColor: colors.background,
+  paddingHorizontal: 20,
+  paddingVertical: 16,
+  paddingBottom: 50,
+  backgroundColor: colors.background,
   },
   activitiesButton: {
     backgroundColor: '#2E7D32',
@@ -859,6 +1099,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 3.84,
     elevation: 3,
+  },
+  selectionButton: {
+  backgroundColor: '#2E7D32',
+  paddingVertical: 8,
+  paddingHorizontal: 50,
+  borderRadius: 8,
+  alignItems: 'center',
+  flex: 1,
+  shadowColor: '#000',
+  shadowOffset: {
+    width: 0,
+    height: 2,
+  },
+  shadowOpacity: 0.15,
+  shadowRadius: 3.84,
+  elevation: 3,
   },
   activitiesButtonText: {
     color: colors.white,
@@ -1088,6 +1344,90 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  checkboxContainer: {
+  marginLeft: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#FFF',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#FFF',
+  },
+  checkboxText: {
+    color: '#2E7D32',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  selectionButtonsContainer: {
+  flexDirection: 'row',
+  gap: 16,
+  width: '100%',
+  },
+  cancelSelectionButton: {
+    flex: 1,
+    backgroundColor: '#757575',
+  },
+  confirmSelectionButton: {
+    flex: 1,
+    backgroundColor: '#2E7D32',
+  },
+  selectParticipantsButton: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  selectParticipantsButtonText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  selectParticipantsArrow: {
+    fontSize: 20,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+
+  selectAllButton: {
+  alignSelf: 'center',
+  marginTop: 16,
+  marginBottom: 8,
+  paddingVertical: 8,
+  },
+  selectAllText: {
+    fontSize: 16,
+    color: '#2E7D32',
+    fontWeight: '600',
+  },
+  selectionButtonContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+  },
+  selectionCountBadge: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    minWidth: 24,
+    textAlign: 'center',
+  },
+
 });
 
 export default RankingView;
