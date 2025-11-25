@@ -38,22 +38,22 @@ interface ExercisesData {
 }
 
 const ActivitiesScreen: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'tela' | 'exercicios'>('tela');
+  const [activeTab, setActiveTab] = useState<'tela' | 'exercicios' | 'historico'>('tela');
   
   // Estado para armazenar os tempos de cada dispositivo
   const [activities, setActivities] = useState<ActivitiesData>({
-    tv: { hours: '0', minutes: '0' },
-    phone: { hours: '0', minutes: '0' },
-    computer: { hours: '0', minutes: '0' },
-    videogame: { hours: '0', minutes: '0' },
+    tv: { hours: '', minutes: '' },
+    phone: { hours: '', minutes: '' },
+    computer: { hours: '', minutes: '' },
+    videogame: { hours: '', minutes: '' },
   });
 
   // Estado para armazenar os tempos de exercícios
   const [exercises, setExercises] = useState<ExercisesData>({
-    sport: { hours: '0', minutes: '0' },
-    running: { hours: '0', minutes: '0' },
-    walking: { hours: '0', minutes: '0' },
-    general: { hours: '0', minutes: '0' },
+    sport: { hours: '', minutes: '' },
+    running: { hours: '', minutes: '' },
+    walking: { hours: '', minutes: '' },
+    general: { hours: '', minutes: '' },
   });
 
   // Função para calcular o tempo total em minutos (tempo de tela)
@@ -207,6 +207,18 @@ const ActivitiesScreen: React.FC = () => {
     value: string
   ) => {
     const numericValue = value.replace(/[^0-9]/g, '');
+    
+    if (numericValue === '') {
+      setExercises(prev => ({
+        ...prev,
+        [exercise]: {
+          ...prev[exercise],
+          [type]: '',
+        },
+      }));
+      return;
+    }
+    
     let finalValue = parseInt(numericValue) || 0;
     
     if (type === 'hours') {
@@ -329,6 +341,7 @@ const ActivitiesScreen: React.FC = () => {
       };
     });
   };
+  
   const handleInputChange = (
     device: keyof ActivitiesData,
     type: 'hours' | 'minutes',
@@ -336,6 +349,18 @@ const ActivitiesScreen: React.FC = () => {
   ) => {
     // Remove caracteres não numéricos
     const numericValue = value.replace(/[^0-9]/g, '');
+    
+    // Se o valor for vazio, mantém vazio para mostrar o placeholder
+    if (numericValue === '') {
+      setActivities(prev => ({
+        ...prev,
+        [device]: {
+          ...prev[device],
+          [type]: '',
+        },
+      }));
+      return;
+    }
     
     // Valida limites
     let finalValue = parseInt(numericValue) || 0;
@@ -410,19 +435,19 @@ const ActivitiesScreen: React.FC = () => {
     try {
       // Calcular total de minutos para cada dispositivo
       const screenTimeData = {
-        tv: parseInt(activities.tv.hours) * 60 + parseInt(activities.tv.minutes),
-        phone: parseInt(activities.phone.hours) * 60 + parseInt(activities.phone.minutes),
-        computer: parseInt(activities.computer.hours) * 60 + parseInt(activities.computer.minutes),
-        videogame: parseInt(activities.videogame.hours) * 60 + parseInt(activities.videogame.minutes),
+        tv: parseInt(activities.tv.hours || '0') * 60 + parseInt(activities.tv.minutes || '0'),
+        phone: parseInt(activities.phone.hours || '0') * 60 + parseInt(activities.phone.minutes || '0'),
+        computer: parseInt(activities.computer.hours || '0') * 60 + parseInt(activities.computer.minutes || '0'),
+        videogame: parseInt(activities.videogame.hours || '0') * 60 + parseInt(activities.videogame.minutes || '0'),
         timestamp: new Date().toISOString(),
       };
 
       // Calcular total de minutos para cada exercício
       const exerciseData = {
-        sport: parseInt(exercises.sport.hours) * 60 + parseInt(exercises.sport.minutes),
-        running: parseInt(exercises.running.hours) * 60 + parseInt(exercises.running.minutes),
-        walking: parseInt(exercises.walking.hours) * 60 + parseInt(exercises.walking.minutes),
-        general: parseInt(exercises.general.hours) * 60 + parseInt(exercises.general.minutes),
+        sport: parseInt(exercises.sport.hours || '0') * 60 + parseInt(exercises.sport.minutes || '0'),
+        running: parseInt(exercises.running.hours || '0') * 60 + parseInt(exercises.running.minutes || '0'),
+        walking: parseInt(exercises.walking.hours || '0') * 60 + parseInt(exercises.walking.minutes || '0'),
+        general: parseInt(exercises.general.hours || '0') * 60 + parseInt(exercises.general.minutes || '0'),
         timestamp: new Date().toISOString(),
       };
 
@@ -433,17 +458,17 @@ const ActivitiesScreen: React.FC = () => {
       
       // Resetar valores após salvar
       setActivities({
-        tv: { hours: '0', minutes: '0' },
-        phone: { hours: '0', minutes: '0' },
-        computer: { hours: '0', minutes: '0' },
-        videogame: { hours: '0', minutes: '0' },
+        tv: { hours: '', minutes: '' },
+        phone: { hours: '', minutes: '' },
+        computer: { hours: '', minutes: '' },
+        videogame: { hours: '', minutes: '' },
       });
       
       setExercises({
-        sport: { hours: '0', minutes: '0' },
-        running: { hours: '0', minutes: '0' },
-        walking: { hours: '0', minutes: '0' },
-        general: { hours: '0', minutes: '0' },
+        sport: { hours: '', minutes: '' },
+        running: { hours: '', minutes: '' },
+        walking: { hours: '', minutes: '' },
+        general: { hours: '', minutes: '' },
       });
       
     } catch (error) {
@@ -513,11 +538,11 @@ const ActivitiesScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.controlButtonLeft}
             onPress={() => updateTime(device, 'minutes', 'decrement')}
-            disabled={parseInt(activities[device].hours) === 24}
+            disabled={parseInt(activities[device].hours || '0') === 24}
           >
             <Text style={[
               styles.controlButtonText,
-              parseInt(activities[device].hours) === 24 && styles.controlButtonDisabled
+              parseInt(activities[device].hours || '0') === 24 && styles.controlButtonDisabled
             ]}>−</Text>
           </TouchableOpacity>
 
@@ -526,7 +551,7 @@ const ActivitiesScreen: React.FC = () => {
           <TextInput
             style={[
               styles.timeInput,
-              (parseInt(activities[device].hours) === 24 || isFieldLocked(device)) && styles.timeInputDisabled
+              (parseInt(activities[device].hours || '0') === 24 || isFieldLocked(device)) && styles.timeInputDisabled
             ]}
             value={activities[device].minutes}
             onChangeText={(value) => handleInputChange(device, 'minutes', value)}
@@ -534,7 +559,7 @@ const ActivitiesScreen: React.FC = () => {
             maxLength={2}
             placeholder="mm"
             placeholderTextColor="#999"
-            editable={parseInt(activities[device].hours) !== 24 && !isFieldLocked(device)}
+            editable={parseInt(activities[device].hours || '0') !== 24 && !isFieldLocked(device)}
           />
 
           <View style={styles.divider} />
@@ -543,14 +568,14 @@ const ActivitiesScreen: React.FC = () => {
             style={styles.controlButtonRight}
             onPress={() => updateTime(device, 'minutes', 'increment')}
             disabled={
-              parseInt(activities[device].hours) === 24 || 
+              parseInt(activities[device].hours || '0') === 24 || 
               !canIncrement(device, 'minutes') || 
               isFieldLocked(device)
             }
           >
             <Text style={[
               styles.controlButtonText,
-              (parseInt(activities[device].hours) === 24 || 
+              (parseInt(activities[device].hours || '0') === 24 || 
                !canIncrement(device, 'minutes') || 
                isFieldLocked(device)) && styles.controlButtonDisabled
             ]}>+</Text>
@@ -621,11 +646,11 @@ const ActivitiesScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.controlButtonLeft}
             onPress={() => updateExerciseTime(exercise, 'minutes', 'decrement')}
-            disabled={parseInt(exercises[exercise].hours) === 24}
+            disabled={parseInt(exercises[exercise].hours || '0') === 24}
           >
             <Text style={[
               styles.controlButtonText,
-              parseInt(exercises[exercise].hours) === 24 && styles.controlButtonDisabled
+              parseInt(exercises[exercise].hours || '0') === 24 && styles.controlButtonDisabled
             ]}>−</Text>
           </TouchableOpacity>
 
@@ -634,7 +659,7 @@ const ActivitiesScreen: React.FC = () => {
           <TextInput
             style={[
               styles.timeInput,
-              (parseInt(exercises[exercise].hours) === 24 || isExerciseFieldLocked(exercise)) && styles.timeInputDisabled
+              (parseInt(exercises[exercise].hours || '0') === 24 || isExerciseFieldLocked(exercise)) && styles.timeInputDisabled
             ]}
             value={exercises[exercise].minutes}
             onChangeText={(value) => handleExerciseInputChange(exercise, 'minutes', value)}
@@ -642,7 +667,7 @@ const ActivitiesScreen: React.FC = () => {
             maxLength={2}
             placeholder="mm"
             placeholderTextColor="#999"
-            editable={parseInt(exercises[exercise].hours) !== 24 && !isExerciseFieldLocked(exercise)}
+            editable={parseInt(exercises[exercise].hours || '0') !== 24 && !isExerciseFieldLocked(exercise)}
           />
 
           <View style={styles.divider} />
@@ -651,14 +676,14 @@ const ActivitiesScreen: React.FC = () => {
             style={styles.controlButtonRight}
             onPress={() => updateExerciseTime(exercise, 'minutes', 'increment')}
             disabled={
-              parseInt(exercises[exercise].hours) === 24 || 
+              parseInt(exercises[exercise].hours || '0') === 24 || 
               !canIncrementExercise(exercise, 'minutes') || 
               isExerciseFieldLocked(exercise)
             }
           >
             <Text style={[
               styles.controlButtonText,
-              (parseInt(exercises[exercise].hours) === 24 || 
+              (parseInt(exercises[exercise].hours || '0') === 24 || 
                !canIncrementExercise(exercise, 'minutes') || 
                isExerciseFieldLocked(exercise)) && styles.controlButtonDisabled
             ]}>+</Text>
@@ -696,6 +721,15 @@ const ActivitiesScreen: React.FC = () => {
                 Exercícios
               </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'historico' && styles.tabButtonActive]}
+              onPress={() => setActiveTab('historico')}
+            >
+              <Text style={[styles.tabButtonText, activeTab === 'historico' && styles.tabButtonTextActive]}>
+                Histórico
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Conteúdo baseado na tab ativa */}
@@ -725,7 +759,7 @@ const ActivitiesScreen: React.FC = () => {
                 icon={require('@/assets/images/videogame_icon.png')}
               />
             </View>
-          ) : (
+          ) : activeTab === 'exercicios' ? (
             <View style={styles.devicesContainer}>
               {/* Sport */}
               <ExerciseRow
@@ -751,12 +785,20 @@ const ActivitiesScreen: React.FC = () => {
                 icon={require('@/assets/images/general_icon.png')}
               />
             </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                Histórico em desenvolvimento
+              </Text>
+            </View>
           )}
 
-          {/* Botão Salvar */}
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Salvar</Text>
-          </TouchableOpacity>
+          {/* Botão Salvar - apenas nas abas tela e exercícios */}
+          {activeTab !== 'historico' && (
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <Text style={styles.saveButtonText}>Salvar</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </SafeAreaView>
     </ProtectedRoute>
@@ -788,12 +830,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   tabButton: {
+    flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border.default,
     backgroundColor: colors.white,
+    alignItems: 'center',
   },
   tabButtonActive: {
     backgroundColor: colors.primary,
@@ -920,7 +964,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  // Estado vazio (tab Exercícios)
+  // Estado vazio (tab Histórico)
   emptyState: {
     paddingVertical: 60,
     alignItems: 'center',
