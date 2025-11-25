@@ -4,13 +4,18 @@ import ProtectedRoute from '@/src/components/protectedRoutes';
 import { useAuth } from '@/src/context/authContext';
 import { API_BASE_URL } from '@/src/services/authService';
 import { colors } from '@/src/styles/styles';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -37,7 +42,21 @@ const RankingView: React.FC = () => {
   const [rankingData, setRankingData] = useState<RankingData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showActivitiesMenu, setShowActivitiesMenu] = useState(false);
+  const [createActivityModalVisible, setCreateActivityModalVisible] = useState(false);
+  const [activityType, setActivityType] = useState('');
+  const [activityDescription, setActivityDescription] = useState('');
+  const [activityDate, setActivityDate] = useState<Date>(new Date());
+  const [displayActivityDate, setDisplayActivityDate] = useState<string>('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [activityHours, setActivityHours] = useState('');
+  const [activityMinutes, setActivityMinutes] = useState('');
+  const [activityIntensity, setActivityIntensity] = useState('');
+  const [isCreatingActivity, setIsCreatingActivity] = useState(false);
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [showIntensityDropdown, setShowIntensityDropdown] = useState(false);
 
+  const activityTypes = ['Esporte', 'Corrida', 'Caminhada', 'Geral'];
+  const intensityLevels = ['1', '2', '3'];
   useEffect(() => {
     if (id) {
       fetchRankingData();
@@ -131,14 +150,8 @@ const RankingView: React.FC = () => {
       // Professor: mostra menu de opções
       setShowActivitiesMenu(true);
     } else {
-      // Aluno: vai direto para rankingActivities
-      router.push({
-        pathname: '/rankingActivities',
-        params: {
-          rankingId: id,
-          rankingName: name,
-        }
-      });
+      // Aluno: mostra menu de opções também
+      setShowActivitiesMenu(true);
     }
   };
 
@@ -160,6 +173,137 @@ const RankingView: React.FC = () => {
         rankingName: name,
       }
     });
+  };
+
+  // Handlers para modal de criar atividade (aluno)
+  const openCreateActivityModal = () => {
+    if (!userProfile?.studentData?.userId) {
+      Alert.alert('Erro', 'ID do estudante não encontrado.');
+      return;
+    }
+    setCreateActivityModalVisible(true);
+  };
+
+  const closeCreateActivityModal = () => {
+    setCreateActivityModalVisible(false);
+    setActivityType('');
+    setActivityDescription('');
+    setDisplayActivityDate('');
+    setActivityDate(new Date());
+    setActivityHours('');
+    setActivityMinutes('');
+    setActivityIntensity('');
+  };
+
+  const onActivityDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    
+    if (selectedDate) {
+      setActivityDate(selectedDate);
+      const formatted = selectedDate.toLocaleDateString('pt-BR');
+      setDisplayActivityDate(formatted);
+    }
+  };
+
+  const handleCreateStudentActivity = async () => {
+    // Validações
+    if (!activityType) {
+      Alert.alert('Atenção', 'Por favor, selecione o tipo de atividade.');
+      return;
+    }
+
+    if (!activityDescription.trim()) {
+      Alert.alert('Atenção', 'Por favor, insira uma descrição da atividade.');
+      return;
+    }
+
+    if (!displayActivityDate) {
+      Alert.alert('Atenção', 'Por favor, selecione a data de realização.');
+      return;
+    }
+
+    if (!activityHours && !activityMinutes) {
+      Alert.alert('Atenção', 'Por favor, informe o tempo de atividade.');
+      return;
+    }
+
+    const hours = parseInt(activityHours || '0');
+    const minutes = parseInt(activityMinutes || '0');
+
+    if (hours > 24 || (hours === 24 && minutes > 0)) {
+      Alert.alert('Atenção', 'A duração máxima é de 24 horas.');
+      return;
+    }
+
+    if (minutes > 59) {
+      Alert.alert('Atenção', 'Os minutos devem ser entre 0 e 59.');
+      return;
+    }
+
+    if (!activityIntensity) {
+      Alert.alert('Atenção', 'Por favor, selecione a intensidade da atividade.');
+      return;
+    }
+
+    if (!userProfile?.studentData?.userId) {
+      Alert.alert('Erro', 'ID do estudante não encontrado.');
+      return;
+    }
+
+    if (!id) {
+      Alert.alert('Erro', 'ID do ranking não encontrado.');
+      return;
+    }
+
+    setIsCreatingActivity(true);
+
+    try {
+      const timeSpentInSeconds = (hours * 3600) + (minutes * 60);
+      
+      // Converte a intensidade selecionada (1-3) para o valor esperado pelo backend (0-2)
+      const intensityValue = parseInt(activityIntensity) - 1;
+
+      const payload = {
+        ocurredAt: activityDate.toISOString(),
+        type: activityType,
+        description: activityDescription.trim(),
+        timeSpentInSeconds: timeSpentInSeconds,
+        intesity: intensityValue,
+      };
+
+      console.log('Payload sendo enviado:', payload);
+
+      const response = await fetch(
+        `${API_BASE_URL}/activities/student/ranking/${id}/student/${userProfile.studentData.userId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (response.ok) {
+        Alert.alert('Sucesso', 'Atividade criada com sucesso!');
+        closeCreateActivityModal();
+      } else {
+        const error = await response.json();
+        const errorMessage =
+          typeof error.message === 'string'
+            ? error.message
+            : Array.isArray(error.message)
+              ? error.message.join(', ')
+              : 'Não foi possível criar a atividade.';
+
+        Alert.alert('Erro', errorMessage);
+      }
+    } catch (error) {
+      console.error('Erro ao criar atividade:', error);
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+    } finally {
+      setIsCreatingActivity(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -310,14 +454,16 @@ const RankingView: React.FC = () => {
             <View style={{ height: 20 }} />
           </ScrollView>
         ) : (
-          // Menu de Atividades (apenas para professores)
+          // Menu de Atividades
           <View style={styles.activitiesMenuContainer}>
             <TouchableOpacity 
               style={styles.menuButton} 
-              onPress={handleCreateActivity}
+              onPress={userProfile?.user?.role === 1 ? handleCreateActivity : openCreateActivityModal}
               activeOpacity={0.8}
             >
-              <Text style={styles.menuButtonText}>Criar Atividade</Text>
+              <Text style={styles.menuButtonText}>
+                {userProfile?.user?.role === 1 ? 'Criar Atividade (Professor)' : 'Criar Atividade'}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -328,7 +474,7 @@ const RankingView: React.FC = () => {
               <Text style={styles.menuButtonText}>Ver Atividades</Text>
             </TouchableOpacity>
           </View>
-        )}
+        )}       
 
         {/* Botão Atividades fixo na parte inferior - apenas quando não está no menu */}
         {!showActivitiesMenu && (
@@ -342,6 +488,197 @@ const RankingView: React.FC = () => {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Modal para criar atividade (aluno) */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={createActivityModalVisible}
+          onRequestClose={closeCreateActivityModal}
+        >
+          <View style={styles.modalOverlay}>
+            <ScrollView 
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Criar Atividade</Text>
+                <Text style={styles.modalSubtitle}>
+                  Preencha as informações da atividade realizada
+                </Text>
+
+                {/* Tipo de Atividade */}
+                <Text style={styles.inputLabel}>Tipo de Atividade</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowTypeDropdown(!showTypeDropdown)}
+                  disabled={isCreatingActivity}
+                >
+                  <View style={styles.dropdownContainer}>
+                    <Text style={[styles.dropdownText, !activityType && styles.dropdownPlaceholder]}>
+                      {activityType || 'Selecione o tipo'}
+                    </Text>
+                    <Text style={styles.dropdownArrow}>{showTypeDropdown ? '▲' : '▼'}</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {showTypeDropdown && (
+                  <View style={styles.dropdownList}>
+                    {activityTypes.map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setActivityType(type);
+                          setShowTypeDropdown(false);
+                        }}
+                      >
+                        <Text style={styles.dropdownItemText}>{type}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* Descrição */}
+              <Text style={styles.inputLabel}>Descrição</Text>
+              <TextInput
+                style={[styles.modalInput, styles.textArea]}
+                value={activityDescription}
+                onChangeText={setActivityDescription}
+                placeholder="Descreva brevemente a atividade realizada"
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={3}
+                editable={!isCreatingActivity}
+                textAlignVertical="top"
+                blurOnSubmit={false}
+                returnKeyType="done"
+                scrollEnabled={false}
+              />
+
+                {/* Data de Realização */}
+                <Text style={styles.inputLabel}>Data de Realização</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowDatePicker(true)}
+                  disabled={isCreatingActivity}
+                >
+                  <View style={styles.dateInputContainer}>
+                    <Text style={[styles.dateInputText, !displayActivityDate && styles.dateInputPlaceholder]}>
+                      {displayActivityDate || 'Selecione a data'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={activityDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={onActivityDateChange}
+                    maximumDate={new Date()}
+                  />
+                )}
+
+                {/* Tempo de Atividade */}
+                <Text style={styles.inputLabel}>Tempo de Atividade</Text>
+                <View style={styles.timeInputRow}>
+                  <View style={styles.timeInputGroup}>
+                    <TextInput
+                      style={styles.timeInput}
+                      value={activityHours}
+                      onChangeText={(text) => {
+                        const num = text.replace(/[^0-9]/g, '');
+                        if (num === '' || parseInt(num) <= 24) {
+                          setActivityHours(num);
+                        }
+                      }}
+                      placeholder="0"
+                      placeholderTextColor="#999"
+                      keyboardType="numeric"
+                      maxLength={2}
+                      editable={!isCreatingActivity}
+                    />
+                    <Text style={styles.timeLabel}>horas</Text>
+                  </View>
+
+                  <Text style={styles.timeSeparator}>:</Text>
+
+                  <View style={styles.timeInputGroup}>
+                    <TextInput
+                      style={styles.timeInput}
+                      value={activityMinutes}
+                      onChangeText={(text) => {
+                        const num = text.replace(/[^0-9]/g, '');
+                        if (num === '' || parseInt(num) <= 59) {
+                          setActivityMinutes(num);
+                        }
+                      }}
+                      placeholder="0"
+                      placeholderTextColor="#999"
+                      keyboardType="numeric"
+                      maxLength={2}
+                      editable={!isCreatingActivity}
+                    />
+                    <Text style={styles.timeLabel}>minutos</Text>
+                  </View>
+                </View>
+
+                {/* Intensidade */}
+                <Text style={styles.inputLabel}>Intensidade</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowIntensityDropdown(!showIntensityDropdown)}
+                  disabled={isCreatingActivity}
+                >
+                  <View style={styles.dropdownContainer}>
+                    <Text style={[styles.dropdownText, !activityIntensity && styles.dropdownPlaceholder]}>
+                      {activityIntensity ? `Nível ${activityIntensity}` : 'Selecione a intensidade'}
+                    </Text>
+                    <Text style={styles.dropdownArrow}>{showIntensityDropdown ? '▲' : '▼'}</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {showIntensityDropdown && (
+                  <View style={styles.dropdownList}>
+                    {intensityLevels.map((level) => (
+                      <TouchableOpacity
+                        key={level}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setActivityIntensity(level);
+                          setShowIntensityDropdown(false);
+                        }}
+                      >
+                        <Text style={styles.dropdownItemText}>Nível {level}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* Botões */}
+                <View style={styles.modalButtonContainer}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={closeCreateActivityModal}
+                    disabled={isCreatingActivity}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.confirmButton]}
+                    onPress={handleCreateStudentActivity}
+                    disabled={isCreatingActivity}
+                  >
+                    {isCreatingActivity ? (
+                      <ActivityIndicator size="small" color="#FFF" />
+                    ) : (
+                      <Text style={styles.confirmButtonText}>Criar</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </Modal>
       </View>
     </ProtectedRoute>
   );
@@ -555,6 +892,199 @@ const styles = StyleSheet.create({
   },
   menuButtonText: {
     color: colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  modalInput: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#000',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#DDD',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  dateInputContainer: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#DDD',
+  },
+  dateInputText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  dateInputPlaceholder: {
+    color: '#999',
+  },
+  dropdownContainer: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  dropdownPlaceholder: {
+    color: '#999',
+  },
+  dropdownArrow: {
+    fontSize: 12,
+    color: '#666',
+  },
+  dropdownList: {
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    marginBottom: 12,
+    marginTop: -8,
+    maxHeight: 200,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  timeInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  timeInputGroup: {
+    alignItems: 'center',
+  },
+  timeInput: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+    borderWidth: 1,
+    borderColor: '#DDD',
+    textAlign: 'center',
+    width: 80,
+    marginBottom: 4,
+  },
+  timeLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  timeSeparator: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginHorizontal: 12,
+    marginBottom: 20,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  cancelButton: {
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: '#DDD',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  confirmButton: {
+    backgroundColor: '#2E7D32',
+  },
+  confirmButtonText: {
+    color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
