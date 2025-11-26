@@ -239,10 +239,17 @@ const RankingView: React.FC = () => {
   };
 
   const handleSelectAllParticipants = () => {
-  if (!rankingData) return;
-  
-  const allIds = rankingData.participants.map(p => p.userId);
-  setSelectedParticipantIds(allIds);
+    if (!rankingData) return;
+    
+    const allIds = rankingData.participants.map(p => p.userId);
+    
+    // Se todos já estão selecionados, desseleciona todos
+    if (selectedParticipantIds.length === allIds.length) {
+      setSelectedParticipantIds([]);
+    } else {
+      // Caso contrário, seleciona todos
+      setSelectedParticipantIds(allIds);
+    }
   };
 
   // Handlers para modal de criar atividade (aluno)
@@ -367,6 +374,7 @@ const RankingView: React.FC = () => {
       if (response.ok) {
         Alert.alert('Sucesso', 'Atividade criada com sucesso!');
         closeCreateActivityModal();
+        fetchRankingData();
       } else {
         const error = await response.json();
         const errorMessage =
@@ -476,6 +484,7 @@ const RankingView: React.FC = () => {
       Alert.alert('Sucesso', 'Atividade criada com sucesso!');
       closeCreateActivityModal();
       setSelectedParticipantIds([]);
+      fetchRankingData();
     } else {
       const error = await response.json();
       const errorMessage =
@@ -736,51 +745,58 @@ const RankingView: React.FC = () => {
 
                 {/* Tipo de Atividade */}
                 <Text style={styles.inputLabel}>Tipo de Atividade</Text>
-                <TouchableOpacity 
-                  onPress={() => setShowTypeDropdown(!showTypeDropdown)}
-                  disabled={isCreatingActivity}
-                >
-                  <View style={styles.dropdownContainer}>
-                    <Text style={[styles.dropdownText, !activityType && styles.dropdownPlaceholder]}>
-                      {activityType || 'Selecione o tipo'}
-                    </Text>
-                    <Text style={styles.dropdownArrow}>{showTypeDropdown ? '▲' : '▼'}</Text>
-                  </View>
-                </TouchableOpacity>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setShowTypeDropdown(!showTypeDropdown);
+                      setShowIntensityDropdown(false); // Fecha o outro dropdown
+                    }}
+                    disabled={isCreatingActivity}
+                  >
+                    <View style={styles.dropdownContainer}>
+                      <Text style={[styles.dropdownText, !activityType && styles.dropdownPlaceholder]}>
+                        {activityType || 'Selecione o tipo'}
+                      </Text>
+                      <Text style={styles.dropdownArrow}>{showTypeDropdown ? '▲' : '▼'}</Text>
+                    </View>
+                  </TouchableOpacity>
 
-                {showTypeDropdown && (
-                  <View style={styles.dropdownList}>
-                    {activityTypes.map((type) => (
-                      <TouchableOpacity
-                        key={type}
-                        style={styles.dropdownItem}
-                        onPress={() => {
-                          setActivityType(type);
-                          setShowTypeDropdown(false);
-                        }}
-                      >
-                        <Text style={styles.dropdownItemText}>{type}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
+                  {showTypeDropdown && (
+                    <View style={styles.dropdownList}>
+                      <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
+                        {activityTypes.map((type) => (
+                          <TouchableOpacity
+                            key={type}
+                            style={styles.dropdownItem}
+                            onPress={() => {
+                              setActivityType(type);
+                              setShowTypeDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.dropdownItemText}>{type}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
 
                 {/* Descrição */}
-              <Text style={styles.inputLabel}>Descrição</Text>
-              <TextInput
-                style={[styles.modalInput, styles.textArea]}
-                value={activityDescription}
-                onChangeText={setActivityDescription}
-                placeholder="Descreva brevemente a atividade realizada"
-                placeholderTextColor="#999"
-                multiline
-                numberOfLines={3}
-                editable={!isCreatingActivity}
-                textAlignVertical="top"
-                blurOnSubmit={false}
-                returnKeyType="done"
-                scrollEnabled={false}
-              />
+                <Text style={styles.inputLabel}>Descrição</Text>
+                <TextInput
+                  style={[styles.modalInput, styles.textArea]}
+                  value={activityDescription}
+                  onChangeText={setActivityDescription}
+                  placeholder="Descreva brevemente a atividade realizada"
+                  placeholderTextColor="#999"
+                  multiline
+                  numberOfLines={3}
+                  editable={!isCreatingActivity}
+                  textAlignVertical="top"
+                  blurOnSubmit={false}
+                  returnKeyType="done"
+                  scrollEnabled={false}
+                />
 
                 {/* Data de Realização */}
                 <Text style={styles.inputLabel}>Data de Realização</Text>
@@ -851,34 +867,41 @@ const RankingView: React.FC = () => {
 
                 {/* Intensidade */}
                 <Text style={styles.inputLabel}>Intensidade</Text>
-                <TouchableOpacity 
-                  onPress={() => setShowIntensityDropdown(!showIntensityDropdown)}
-                  disabled={isCreatingActivity}
-                >
-                  <View style={styles.dropdownContainer}>
-                    <Text style={[styles.dropdownText, !activityIntensity && styles.dropdownPlaceholder]}>
-                      {activityIntensity ? `Nível ${activityIntensity}` : 'Selecione a intensidade'}
-                    </Text>
-                    <Text style={styles.dropdownArrow}>{showIntensityDropdown ? '▲' : '▼'}</Text>
-                  </View>
-                </TouchableOpacity>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setShowIntensityDropdown(!showIntensityDropdown);
+                      setShowTypeDropdown(false); // Fecha o outro dropdown
+                    }}
+                    disabled={isCreatingActivity}
+                  >
+                    <View style={styles.dropdownContainer}>
+                      <Text style={[styles.dropdownText, !activityIntensity && styles.dropdownPlaceholder]}>
+                        {activityIntensity ? `Nível ${activityIntensity}` : 'Selecione a intensidade'}
+                      </Text>
+                      <Text style={styles.dropdownArrow}>{showIntensityDropdown ? '▲' : '▼'}</Text>
+                    </View>
+                  </TouchableOpacity>
 
-                {showIntensityDropdown && (
-                  <View style={styles.dropdownList}>
-                    {intensityLevels.map((level) => (
-                      <TouchableOpacity
-                        key={level}
-                        style={styles.dropdownItem}
-                        onPress={() => {
-                          setActivityIntensity(level);
-                          setShowIntensityDropdown(false);
-                        }}
-                      >
-                        <Text style={styles.dropdownItemText}>Nível {level}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
+                  {showIntensityDropdown && (
+                    <View style={styles.dropdownList}>
+                      <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
+                        {intensityLevels.map((level) => (
+                          <TouchableOpacity
+                            key={level}
+                            style={styles.dropdownItem}
+                            onPress={() => {
+                              setActivityIntensity(level);
+                              setShowIntensityDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.dropdownItemText}>Nível {level}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
 
                 {/* Participantes Selecionados - apenas para professor */}
                 {userProfile?.user?.role === 1 && (
@@ -1234,7 +1257,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#DDD',
     flexDirection: 'row',
@@ -1253,12 +1275,14 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   dropdownList: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
     backgroundColor: '#FFF',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#DDD',
-    marginBottom: 12,
-    marginTop: -8,
     maxHeight: 200,
     shadowColor: '#000',
     shadowOffset: {
@@ -1267,7 +1291,16 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 3,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  dropdownWrapper: {
+  position: 'relative',
+  zIndex: 1,
+  marginBottom: 12,
+  },
+  dropdownScroll: {
+    maxHeight: 200,
   },
   dropdownItem: {
     paddingVertical: 12,
