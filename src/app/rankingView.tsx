@@ -34,7 +34,8 @@ interface RankingData {
   endDate: string;
 }
 
-const RankingView: React.FC = () => {
+const RankingView: React.FC = () => 
+  {
   const router = useRouter();
   const { userProfile } = useAuth();
   const { id, name, startDate, endDate } = useLocalSearchParams();
@@ -50,24 +51,35 @@ const RankingView: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [activityHours, setActivityHours] = useState('');
   const [activityMinutes, setActivityMinutes] = useState('');
-  const [activityIntensity, setActivityIntensity] = useState('');
-  const [isCreatingActivity, setIsCreatingActivity] = useState(false);
+  const [activityIntensity, setActivityIntensity] = useState<number | null>(null);  const [isCreatingActivity, setIsCreatingActivity] = useState(false);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showIntensityDropdown, setShowIntensityDropdown] = useState(false);
   const [isSelectingParticipants, setIsSelectingParticipants] = useState(false);
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
-  const [tempModalData, setTempModalData] = useState({
+  const [tempModalData, setTempModalData] = useState<{
+    type: string;
+    description: string;
+    date: Date;
+    displayDate: string;
+    hours: string;
+    minutes: string;
+    intensity: number | null;
+  }>({
     type: '',
     description: '',
     date: new Date(),
     displayDate: '',
     hours: '',
     minutes: '',
-    intensity: '',
+    intensity: null,
   });
 
   const activityTypes = ['Esporte', 'Corrida', 'Caminhada', 'Geral'];
-  const intensityLevels = ['1', '2', '3'];
+  const intensityLevels = [
+  { label: 'Leve', value: 0 },
+  { label: 'Moderada', value: 1 },
+  { label: 'Vigorosa', value: 2 }
+  ];
   useEffect(() => {
     if (id) {
       fetchRankingData();
@@ -270,16 +282,16 @@ const RankingView: React.FC = () => {
   };
 
   const closeCreateActivityModal = () => {
-    setCreateActivityModalVisible(false);
-    setActivityType('');
-    setActivityDescription('');
-    setDisplayActivityDate('');
-    setActivityDate(new Date());
-    setActivityHours('');
-    setActivityMinutes('');
-    setActivityIntensity('');
-    setSelectedParticipantIds([]);
-    setIsSelectingParticipants(false);
+  setCreateActivityModalVisible(false);
+  setActivityType('');
+  setActivityDescription('');
+  setDisplayActivityDate('');
+  setActivityDate(new Date());
+  setActivityHours('');
+  setActivityMinutes('');
+  setActivityIntensity(null);
+  setSelectedParticipantIds([]);
+  setIsSelectingParticipants(false);
   };
 
   const onActivityDateChange = (event: any, selectedDate?: Date) => {
@@ -327,7 +339,7 @@ const RankingView: React.FC = () => {
       return;
     }
 
-    if (!activityIntensity) {
+    if (activityIntensity === null) {
       Alert.alert('Atenção', 'Por favor, selecione a intensidade da atividade.');
       return;
     }
@@ -347,21 +359,18 @@ const RankingView: React.FC = () => {
     try {
       const timeSpentInSeconds = (hours * 3600) + (minutes * 60);
       
-      // Converte a intensidade selecionada (1-3) para o valor esperado pelo backend (0-2)
-      const intensityValue = parseInt(activityIntensity) - 1;
-
       const payload = {
         ocurredAt: activityDate.toISOString(),
         type: activityType,
         description: activityDescription.trim(),
         timeSpentInSeconds: timeSpentInSeconds,
-        intesity: intensityValue,
+        intesity: activityIntensity,
       };
 
       console.log('Payload sendo enviado:', payload);
 
       const response = await fetch(
-        `${API_BASE_URL}/activities/student/ranking/${id}/student/${userProfile.studentData.userId}`,
+        `${API_BASE_URL}/activities/student/${id}/${userProfile.studentData.userId}`,
         {
           method: 'POST',
           headers: {
@@ -429,7 +438,7 @@ const RankingView: React.FC = () => {
     return;
   }
 
-  if (!activityIntensity) {
+  if (activityIntensity === null) {
     Alert.alert('Atenção', 'Por favor, selecione a intensidade da atividade.');
     return;
   }
@@ -448,17 +457,15 @@ const RankingView: React.FC = () => {
 
   try {
     const timeSpentInSeconds = (hours * 3600) + (minutes * 60);
-    const intensityValue = parseInt(activityIntensity) - 1;
 
     const payload = {
       ocurredAt: activityDate.toISOString(),
       type: activityType,
       description: activityDescription.trim(),
       timeSpentInSeconds: timeSpentInSeconds,
-      intesity: intensityValue,
+      intesity: activityIntensity,
       participantIds: selectedParticipantIds,
     };
-
     console.log('Payload professor sendo enviado:', payload);
 
     const teacherId = userProfile?.user?._id;
@@ -470,7 +477,8 @@ const RankingView: React.FC = () => {
     }
 
     const response = await fetch(
-      `${API_BASE_URL}/activities/group/ranking/${id}/teacher/${teacherId}`,
+      //`${API_BASE_URL}/activities/group/ranking/${id}/teacher/${teacherId}`,
+      `${API_BASE_URL}/activities/teacher/${teacherId}/ranking/${id}`,
       {
         method: 'POST',
         headers: {
@@ -874,31 +882,31 @@ const RankingView: React.FC = () => {
                       setShowTypeDropdown(false); // Fecha o outro dropdown
                     }}
                     disabled={isCreatingActivity}
-                  >
+                    >
                     <View style={styles.dropdownContainer}>
-                      <Text style={[styles.dropdownText, !activityIntensity && styles.dropdownPlaceholder]}>
-                        {activityIntensity ? `Nível ${activityIntensity}` : 'Selecione a intensidade'}
+                      <Text style={[styles.dropdownText, activityIntensity === null && styles.dropdownPlaceholder]}>
+                        {activityIntensity !== null 
+                          ? intensityLevels.find(level => level.value === activityIntensity)?.label 
+                          : 'Selecione a intensidade'}
                       </Text>
                       <Text style={styles.dropdownArrow}>{showIntensityDropdown ? '▲' : '▼'}</Text>
-                    </View>
+                    </View>                  
                   </TouchableOpacity>
 
                   {showIntensityDropdown && (
                     <View style={styles.dropdownList}>
-                      <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-                        {intensityLevels.map((level) => (
-                          <TouchableOpacity
-                            key={level}
-                            style={styles.dropdownItem}
-                            onPress={() => {
-                              setActivityIntensity(level);
-                              setShowIntensityDropdown(false);
-                            }}
-                          >
-                            <Text style={styles.dropdownItemText}>Nível {level}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
+                      {intensityLevels.map((level) => (
+                        <TouchableOpacity
+                          key={level.value}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setActivityIntensity(level.value);
+                            setShowIntensityDropdown(false);
+                          }}
+                        >
+                          <Text style={styles.dropdownItemText}>{level.label}</Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
                   )}
                 </View>
