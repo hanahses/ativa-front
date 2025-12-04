@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useAuth } from '../context/authContext';
 import authService from '../services/authService';
 import { colors } from '../styles/styles';
 
@@ -28,10 +29,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   showMenuButton = true,
   showStatsButton = true,
 }) => {
+  const { userProfile } = useAuth();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [topMenuVisible, setTopMenuVisible] = useState(false);
   const [slideAnim] = useState(new Animated.Value(-DRAWER_WIDTH));
   const [slideDownAnim] = useState(new Animated.Value(-60));
+
+  // Verifica se o usuário é aluno (role diferente de 1 = não é professor)
+  const isStudent = userProfile?.user?.role !== 1;
 
   // Abre o drawer lateral
   const openDrawer = () => {
@@ -243,19 +248,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <Text style={styles.menuText}>Perfil</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => navigateTo('/activities')}
-              >
-                <Text style={styles.menuText}>Atividades</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => navigateTo('/settings')}
-              >
-                <Text style={styles.menuText}>Configurações</Text>
-              </TouchableOpacity>
+              {/* Atividades - apenas para alunos */}
+              {isStudent && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => navigateTo('/activities')}
+                >
+                  <Text style={styles.menuText}>Atividades</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={[styles.menuItem, styles.menuItemLast]}
