@@ -1,29 +1,53 @@
 // app/profile.tsx
 import AppHeader from '@/src/components/header';
 import ProtectedRoute from '@/src/components/protectedRoutes';
-import authService, { API_BASE_URL } from '@/src/services/authService';
+import { useAuth } from '@/src/context/authContext';
+import { API_BASE_URL } from '@/src/services/authService';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 40;
+
+// Opções de GRE
+const GRE_OPTIONS = [
+  'Recife Norte',
+  'Recife Sul',
+  'Metropolitana Norte',
+  'Metropolitana Sul',
+  'Mata Norte',
+  'Mata Centro',
+  'Mata Sul',
+  'Vale do Capibaribe',
+  'Agreste Centro Norte',
+  'Agreste Meridional',
+  'Sertão do Moxotó Ipanema',
+  'Sertão do Alto Pajeú',
+  'Sertão do Submédio São Francisco',
+  'Sertão do Médio São Francisco',
+  'Sertão Central',
+  'Sertão do Araripe',
+];
 
 interface PersonalInfoData {
   name: string;
   birthdate: string;
   school: string;
   city: string;
+  gre?: string;
 }
 
 interface StudentData {
@@ -33,192 +57,362 @@ interface StudentData {
 }
 
 const ProfileScreen: React.FC = () => {
-  // Email do usuário
-  const [userEmail, setEmail] = useState<string | null>(null);
+  const { userProfile, isLoading, refreshUserProfile } = useAuth();
+
+  // Estado para controlar o modo de edição
+  const [isEditing, setIsEditing] = useState(false);
 
   // Estados para informações pessoais
   const [name, setName] = useState('');
-  const [birthDate, setBirthDate] = useState<Date>(new Date()); // Date object para o picker
-  const [displayDate, setDisplayDate] = useState<string>(''); // String para exibição
+  const [birthDate, setBirthDate] = useState<Date>(new Date());
+  const [displayDate, setDisplayDate] = useState<string>('');
   const [showPicker, setShowPicker] = useState(false);
   const [school, setSchool] = useState('');
   const [city, setCity] = useState('');
-  const [gre, setGre] = useState('Não informado');
+  const [gre, setGre] = useState('');
+  const [showGrePicker, setShowGrePicker] = useState(false);
 
   // Estados para dados do estudante
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
   const [gender, setGender] = useState('');
 
-  // Estados de loading
-  const [isSavingPersonal, setIsSavingPersonal] = useState(false);
-  const [isSavingStudent, setIsSavingStudent] = useState(false);
+  // Estados para armazenar valores originais (para cancelar edição)
+  const [originalValues, setOriginalValues] = useState({
+    name: '',
+    birthDate: new Date(),
+    displayDate: '',
+    school: '',
+    city: '',
+    gre: '',
+    weight: '',
+    height: '',
+    gender: '',
+  });
 
+  // Estado de loading para salvar
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Carrega os dados do usuário quando o perfil estiver disponível
   useEffect(() => {
-    const fetchUserData = async () => {
-      const userData = await authService.getUserData();
-      if (userData && userData.email) {
-        setEmail(userData.email);
+    if (userProfile) {
+      // Dados pessoais
+      const userName = userProfile.user.name || '';
+      const userSchool = userProfile.user.school || '';
+      const userCity = userProfile.user.city || '';
+      const userGre = userProfile.user.gre || '';
+
+      setName(userName);
+      setSchool(userSchool);
+      setCity(userCity);
+      setGre(userGre);
+
+      // Data de nascimento
+      let userBirthDate = new Date();
+      let userDisplayDate = '';
+      
+      if (userProfile.user.birthdate) {
+        const date = new Date(userProfile.user.birthdate);
+        userBirthDate = date;
+        userDisplayDate = date.toLocaleDateString('pt-BR');
+        setBirthDate(date);
+        setDisplayDate(userDisplayDate);
       }
-    };
 
-    fetchUserData();
-  }, []);
+      // Dados do estudante
+      let userWeight = '';
+      let userHeight = '';
+      let userGender = '';
 
-  // Função para salvar informações pessoais
-  const savePersonalInfo = async () => {
-    if (!name.trim()) {
-      Alert.alert('Atenção', 'Por favor, preencha o nome.');
-      return;
-    }
+      if (userProfile.studentData) {
+        if (userProfile.studentData.weightInGrams != null) {
+          userWeight = (userProfile.studentData.weightInGrams / 1000).toString();
+          setWeight(userWeight);
+        }
+        
+        if (userProfile.studentData.heightInCm != null) {
+          userHeight = userProfile.studentData.heightInCm.toString();
+          setHeight(userHeight);
+        }
+        
+        if (userProfile.studentData.gender) {
+          const genderPt = userProfile.studentData.gender === 'Male' ? 'Masculino' : 'Feminino';
+          userGender = genderPt;
+          setGender(genderPt);
+        }
+      }
 
-    if (!displayDate) {
-      Alert.alert('Atenção', 'Por favor, selecione a data de nascimento.');
-      return;
-    }
-
-    setIsSavingPersonal(true);
-
-    try {
-      // Converte a data para formato ISO 8601
-      const isoDate = birthDate.toISOString();
-
-      const data: PersonalInfoData = {
-        name: name.trim(),
-        birthdate: isoDate,
-        school: school.trim(),
-        city: city.trim(),
-      };
-
-      const response = await fetch(`${API_BASE_URL}/users/personal-info/${userEmail}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+      // Armazena os valores originais para poder cancelar
+      setOriginalValues({
+        name: userName,
+        birthDate: userBirthDate,
+        displayDate: userDisplayDate,
+        school: userSchool,
+        city: userCity,
+        gre: userGre,
+        weight: userWeight,
+        height: userHeight,
+        gender: userGender,
       });
-
-      if (response.ok) {
-        Alert.alert('Sucesso', 'Informações pessoais atualizadas!');
-      } else {
-        const error = await response.json();
-        const errorMessage =
-          typeof error.message === 'string'
-            ? error.message
-            : Array.isArray(error.message)
-              ? error.message.join(', ')
-              : JSON.stringify(error.message);
-
-        Alert.alert('Erro', errorMessage || 'Não foi possível atualizar os dados.');
-      }
-    } catch (error) {
-      console.error('Erro ao salvar informações pessoais:', error);
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
-    } finally {
-      setIsSavingPersonal(false);
     }
+  }, [userProfile]);
+
+  // Função para cancelar a edição e restaurar valores originais
+  const cancelEdit = () => {
+    setName(originalValues.name);
+    setBirthDate(originalValues.birthDate);
+    setDisplayDate(originalValues.displayDate);
+    setSchool(originalValues.school);
+    setCity(originalValues.city);
+    setGre(originalValues.gre);
+    setWeight(originalValues.weight);
+    setHeight(originalValues.height);
+    setGender(originalValues.gender);
+    setIsEditing(false);
   };
 
-  // Função para salvar dados do estudante
-  const saveStudentData = async () => {
-    if (!weight.trim() || !height.trim() || !gender.trim()) {
-      Alert.alert('Atenção', 'Por favor, preencha todos os campos (peso, altura e sexo).');
+  // Função para salvar todas as informações (apenas campos alterados)
+  const saveAllData = async () => {
+    if (!userProfile?.user.email) {
+      Alert.alert('Erro', 'Email do usuário não encontrado.');
       return;
     }
 
-    // Validar se são números válidos
-    const weightNum = parseFloat(weight);
-    const heightNum = parseFloat(height);
-
-    if (isNaN(weightNum) || isNaN(heightNum)) {
-      Alert.alert('Atenção', 'Por favor, insira valores numéricos válidos.');
-      return;
-    }
-
-    setIsSavingStudent(true);
+    setIsSaving(true);
 
     try {
-      // Converter peso de kg para gramas e altura já está em cm
-      const weightInGrams = Math.round(weightNum * 1000);
-      const heightInCm = Math.round(heightNum);
+      let successCount = 0;
+      let errorMessages: string[] = [];
 
-      // Converter sexo para inglês
-      const genderInEnglish = gender === 'Masculino' ? 'Male' : 'Female';
+      // Verifica se algum campo de informações pessoais foi alterado
+      const personalDataChanged = 
+        name !== originalValues.name ||
+        displayDate !== originalValues.displayDate ||
+        school !== originalValues.school ||
+        city !== originalValues.city ||
+        gre !== originalValues.gre;
 
-      const data: StudentData = {
-        weightInGrams: weightInGrams,
-        heightInCm: heightInCm,
-        gender: genderInEnglish,
-      };
+      if (personalDataChanged) {
+        // Validações para informações pessoais
+        if (!name.trim()) {
+          Alert.alert('Atenção', 'Por favor, preencha o nome.');
+          setIsSaving(false);
+          return;
+        }
 
-      const response = await fetch(`${API_BASE_URL}/users/students/data/${userEmail}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+        if (!displayDate) {
+          Alert.alert('Atenção', 'Por favor, selecione a data de nascimento.');
+          setIsSaving(false);
+          return;
+        }
 
-      if (response.ok) {
-        Alert.alert('Sucesso', 'Dados de peso e altura atualizados!');
-      } else {
-        const error = await response.json();
-        const errorMessage =
-          typeof error.message === 'string'
-            ? error.message
-            : Array.isArray(error.message)
-              ? error.message.join(', ')
-              : JSON.stringify(error.message);
+        const isoDate = birthDate.toISOString();
 
-        Alert.alert('Erro', errorMessage || 'Não foi possível atualizar os dados.');
+        // Monta objeto apenas com campos que foram preenchidos
+        const personalData: any = {
+          name: name.trim(),
+          birthdate: isoDate,
+        };
+
+        // Adiciona campos opcionais apenas se tiverem valor
+        if (school.trim()) {
+          personalData.school = school.trim();
+        }
+        if (city.trim()) {
+          personalData.city = city.trim();
+        }
+        if (gre.trim()) {
+          personalData.gre = gre.trim();
+        }
+
+        const personalResponse = await fetch(`${API_BASE_URL}/users/personal-info/${userProfile.user.email}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(personalData),
+        });
+
+        if (personalResponse.ok) {
+          successCount++;
+        } else {
+          const error = await personalResponse.json();
+          const errorMessage =
+            typeof error.message === 'string'
+              ? error.message
+              : Array.isArray(error.message)
+                ? error.message.join(', ')
+                : JSON.stringify(error.message);
+          errorMessages.push(`Informações pessoais: ${errorMessage}`);
+        }
+      }
+
+      // Verifica se algum campo de dados do estudante foi alterado
+      const studentDataChanged = 
+        weight !== originalValues.weight ||
+        height !== originalValues.height ||
+        gender !== originalValues.gender;
+
+      if (studentDataChanged) {
+        // Validações para dados do estudante apenas se houver alteração
+        if (weight.trim() && height.trim() && gender.trim()) {
+          const weightNum = parseFloat(weight);
+          const heightNum = parseFloat(height);
+
+          if (isNaN(weightNum) || isNaN(heightNum)) {
+            Alert.alert('Atenção', 'Por favor, insira valores numéricos válidos para peso e altura.');
+            setIsSaving(false);
+            return;
+          }
+
+          const weightInGrams = Math.round(weightNum * 1000);
+          const heightInCm = Math.round(heightNum);
+          const genderInEnglish = gender === 'Masculino' ? 'Male' : 'Female';
+
+          const studentData: StudentData = {
+            weightInGrams: weightInGrams,
+            heightInCm: heightInCm,
+            gender: genderInEnglish,
+          };
+
+          const studentResponse = await fetch(`${API_BASE_URL}/users/students/data/${userProfile.user.email}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(studentData),
+          });
+
+          if (studentResponse.ok) {
+            successCount++;
+          } else {
+            const error = await studentResponse.json();
+            const errorMessage =
+              typeof error.message === 'string'
+                ? error.message
+                : Array.isArray(error.message)
+                  ? error.message.join(', ')
+                  : JSON.stringify(error.message);
+            errorMessages.push(`Dados do estudante: ${errorMessage}`);
+          }
+        } else if (weight.trim() || height.trim() || gender.trim()) {
+          // Se algum campo foi preenchido mas não todos
+          Alert.alert('Atenção', 'Por favor, preencha todos os campos físicos (peso, altura e sexo) ou deixe todos em branco.');
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // Verifica se houve alguma alteração
+      if (!personalDataChanged && !studentDataChanged) {
+        Alert.alert('Informação', 'Nenhuma alteração foi feita.');
+        setIsEditing(false);
+        setIsSaving(false);
+        return;
+      }
+
+      // Exibe resultado
+      if (errorMessages.length > 0) {
+        Alert.alert('Erro', errorMessages.join('\n\n'));
+      } else if (successCount > 0) {
+        Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
+        await refreshUserProfile();
+        setIsEditing(false);
       }
     } catch (error) {
-      console.error('Erro ao salvar dados do estudante:', error);
+      console.error('Erro ao salvar perfil:', error);
       Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
     } finally {
-      setIsSavingStudent(false);
+      setIsSaving(false);
     }
   };
 
   // Handler para mudança de data
   const onDateChange = (event: any, selectedDate?: Date) => {
-    setShowPicker(Platform.OS === 'ios'); // No iOS, mantém aberto
+    setShowPicker(Platform.OS === 'ios');
     
     if (selectedDate) {
       setBirthDate(selectedDate);
-      // Formata para exibição (DD/MM/AAAA)
       const formatted = selectedDate.toLocaleDateString('pt-BR');
       setDisplayDate(formatted);
     }
   };
 
-  return (
-    <ProtectedRoute>
+  // Handler para seleção de GRE
+  const selectGre = (selectedGre: string) => {
+    setGre(selectedGre);
+    setShowGrePicker(false);
+  };
+
+  // Exibe loading enquanto carrega os dados
+  if (isLoading) {
+    return (
+      <ProtectedRoute>
         <View style={styles.container}>
           <AppHeader showMenuButton={true} showStatsButton={true} />
-          
-          <ScrollView 
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={true}
-          >
-            {/* Título */}
-            <Text style={styles.mainTitle}>MEU PERFIL</Text>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#00D9FF" />
+            <Text style={styles.loadingText}>Carregando perfil...</Text>
+          </View>
+        </View>
+      </ProtectedRoute>
+    );
+  }
 
-            {/* Card 1 - Informações Pessoais */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.avatarContainer}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarIcon}>👤</Text>
-                  </View>
+  // Verifica se o perfil foi carregado
+  if (!userProfile) {
+    return (
+      <ProtectedRoute>
+        <View style={styles.container}>
+          <AppHeader showMenuButton={true} showStatsButton={true} />
+          <View style={styles.loadingContainer}>
+            <Text style={styles.errorText}>Erro ao carregar perfil</Text>
+          </View>
+        </View>
+      </ProtectedRoute>
+    );
+  }
+
+  return (
+    <ProtectedRoute>
+      <View style={styles.container}>
+        <AppHeader showMenuButton={true} showStatsButton={true} />
+        
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
+        >
+          {/* Botão de Voltar (visível apenas em modo de edição) */}
+          {isEditing && (
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={cancelEdit}
+              disabled={isSaving}
+            >
+              <Text style={styles.backButtonText}>← Voltar</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Título */}
+          <Text style={styles.mainTitle}>MEU PERFIL</Text>
+
+          {/* Card Único com todas as informações */}
+          <View style={styles.card}>
+            {/* Avatar */}
+            <View style={styles.cardHeader}>
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarIcon}>👤</Text>
                 </View>
               </View>
+            </View>
 
-              {/* Nome */}
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>NOME</Text>
-              </View>
+            {/* Nome */}
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>NOME</Text>
+            </View>
+            {isEditing ? (
               <TextInput
                 style={styles.input}
                 value={name}
@@ -226,19 +420,23 @@ const ProfileScreen: React.FC = () => {
                 placeholder="Digite seu nome"
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
               />
-              <View style={styles.divider} />
+            ) : (
+              <Text style={styles.valueText}>{name || 'Não informado'}</Text>
+            )}
+            <View style={styles.divider} />
 
-              {/* Email (não editável) */}
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>E-MAIL</Text>
-              </View>
-              <Text style={styles.valueNonEditable}>{userEmail || 'Carregando...'}</Text>
-              <View style={styles.divider} />
+            {/* Email (não editável) */}
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>E-MAIL</Text>
+            </View>
+            <Text style={styles.valueNonEditable}>{userProfile.user.email}</Text>
+            <View style={styles.divider} />
 
-              {/* Escola */}
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>ESCOLA</Text>
-              </View>
+            {/* Escola */}
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>ESCOLA</Text>
+            </View>
+            {isEditing ? (
               <TextInput
                 style={styles.input}
                 value={school}
@@ -246,12 +444,16 @@ const ProfileScreen: React.FC = () => {
                 placeholder="Digite o nome da escola"
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
               />
-              <View style={styles.divider} />
+            ) : (
+              <Text style={styles.valueText}>{school || 'Não informado'}</Text>
+            )}
+            <View style={styles.divider} />
 
-              {/* Cidade */}
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>CIDADE</Text>
-              </View>
+            {/* Cidade */}
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>CIDADE</Text>
+            </View>
+            {isEditing ? (
               <TextInput
                 style={styles.input}
                 value={city}
@@ -259,55 +461,68 @@ const ProfileScreen: React.FC = () => {
                 placeholder="Digite sua cidade"
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
               />
-              <View style={styles.divider} />
+            ) : (
+              <Text style={styles.valueText}>{city || 'Não informado'}</Text>
+            )}
+            <View style={styles.divider} />
 
-              {/* Data de Nascimento */}
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>DATA DE NASCIMENTO</Text>
-              </View>
-              <TouchableOpacity onPress={() => setShowPicker(true)}>
+            {/* Data de Nascimento */}
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>DATA DE NASCIMENTO</Text>
+            </View>
+            {isEditing ? (
+              <>
+                <TouchableOpacity onPress={() => setShowPicker(true)}>
+                  <View style={styles.dateInputContainer}>
+                    <Text style={[styles.dateInput, !displayDate && styles.dateInputPlaceholder]}>
+                      {displayDate || 'Selecione a data'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {showPicker && (
+                  <DateTimePicker
+                    value={birthDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    maximumDate={new Date()}
+                    onChange={onDateChange}
+                  />
+                )}
+              </>
+            ) : (
+              <Text style={styles.valueText}>{displayDate || 'Não informado'}</Text>
+            )}
+            <View style={styles.divider} />
+
+            {/* GRE */}
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>GRE</Text>
+            </View>
+            {isEditing ? (
+              <TouchableOpacity 
+                onPress={() => setShowGrePicker(true)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.dateInputContainer}>
-                  <Text style={[styles.dateInput, !displayDate && styles.dateInputPlaceholder]}>
-                    {displayDate || 'Selecione a data'}
+                  <Text style={[styles.dateInput, !gre && styles.dateInputPlaceholder]}>
+                    {gre || 'Selecione a GRE'}
                   </Text>
                 </View>
               </TouchableOpacity>
+            ) : (
+              <Text style={styles.valueText}>{gre || 'Não informado'}</Text>
+            )}
+            <View style={styles.divider} />
 
-              {showPicker && (
-                <DateTimePicker
-                  value={birthDate}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  maximumDate={new Date()}
-                  onChange={onDateChange}
-                />
-              )}
-
-              <View style={styles.divider} />
-
-              {/* Botão Salvar Informações Pessoais */}
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={savePersonalInfo}
-                disabled={isSavingPersonal}
-              >
-                <Text style={styles.saveButtonText}>
-                  {isSavingPersonal ? 'Salvando...' : 'Salvar Informações'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Seção - Informações sobre Peso e Altura */}
-            <Text style={styles.sectionTitle}>INFORMAÇÕES SOBRE PESO E ALTURA</Text>
-
-            {/* Card 2 - Peso e Altura */}
-            <View style={styles.card}>
-              <View style={styles.infoRowWithIcon}>
-                <View style={styles.iconContainer}>
-                  <Text style={styles.iconText}>⚖️</Text>
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.label}>PESO (KG)</Text>
+            {/* Peso */}
+            <View style={styles.infoRowWithIcon}>
+              <View style={styles.iconContainer}>
+                <Text style={styles.iconText}>⚖️</Text>
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.label}>PESO (KG)</Text>
+                {isEditing ? (
                   <TextInput
                     style={styles.inputInline}
                     value={weight}
@@ -316,16 +531,21 @@ const ProfileScreen: React.FC = () => {
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     keyboardType="numeric"
                   />
-                </View>
+                ) : (
+                  <Text style={styles.valueText}>{weight ? `${weight} kg` : 'Não informado'}</Text>
+                )}
               </View>
-              <View style={styles.divider} />
+            </View>
+            <View style={styles.divider} />
 
-              <View style={styles.infoRowWithIcon}>
-                <View style={styles.iconContainer}>
-                  <Text style={styles.iconText}>📏</Text>
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.label}>ALTURA (CM)</Text>
+            {/* Altura */}
+            <View style={styles.infoRowWithIcon}>
+              <View style={styles.iconContainer}>
+                <Text style={styles.iconText}>📏</Text>
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.label}>ALTURA (CM)</Text>
+                {isEditing ? (
                   <TextInput
                     style={styles.inputInline}
                     value={height}
@@ -334,14 +554,18 @@ const ProfileScreen: React.FC = () => {
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     keyboardType="numeric"
                   />
-                </View>
+                ) : (
+                  <Text style={styles.valueText}>{height ? `${height} cm` : 'Não informado'}</Text>
+                )}
               </View>
-              <View style={styles.divider} />
+            </View>
+            <View style={styles.divider} />
 
-              {/* Sexo */}
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>SEXO</Text>
-              </View>
+            {/* Sexo */}
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>SEXO</Text>
+            </View>
+            {isEditing ? (
               <View style={styles.genderContainer}>
                 <TouchableOpacity
                   style={[
@@ -368,57 +592,99 @@ const ProfileScreen: React.FC = () => {
                   ]}>Feminino ♀</Text>
                 </TouchableOpacity>
               </View>
-              <View style={styles.divider} />
+            ) : (
+              <Text style={styles.valueText}>{gender || 'Não informado'}</Text>
+            )}
+          </View>
+          
+          {/* Botão de Editar/Salvar */}
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              if (isEditing) {
+                saveAllData();
+              } else {
+                setIsEditing(true);
+              }
+            }}
+            disabled={isSaving}
+          >
+            <Text style={styles.actionButtonText}>
+              {isSaving ? 'Salvando...' : isEditing ? 'Salvar' : 'Editar Perfil'}
+            </Text>
+          </TouchableOpacity>
 
-              {/* Botão Salvar Dados do Estudante */}
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={saveStudentData}
-                disabled={isSavingStudent}
-              >
-                <Text style={styles.saveButtonText}>
-                  {isSavingStudent ? 'Salvando...' : 'Salvar Dados'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+          {/* Espaçamento final */}
+          <View style={{ height: 20 }} />
+        </ScrollView>
 
-            {/* Seção - Informações sobre Escola e Moradia */}
-            <Text style={styles.sectionTitle}>INFORMAÇÕES SOBRE ESCOLA E MORADIA</Text>
-
-            {/* Card 3 - Escola e Moradia */}
-            <View style={styles.card}>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>GRE</Text>
+        {/* Modal de seleção de GRE */}
+        <Modal
+          visible={showGrePicker}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowGrePicker(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Selecione a GRE</Text>
+                <TouchableOpacity onPress={() => setShowGrePicker(false)}>
+                  <Text style={styles.modalCloseButton}>✕</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.valueNonEditable}>{gre}</Text>
-              <View style={styles.divider} />
+              <ScrollView style={styles.modalScrollView}>
+                {GRE_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.greOption,
+                      gre === option && styles.greOptionSelected
+                    ]}
+                    onPress={() => selectGre(option)}
+                  >
+                    <Text style={[
+                      styles.greOptionText,
+                      gre === option && styles.greOptionTextSelected
+                    ]}>
+                      {option}
+                    </Text>
+                    {gre === option && (
+                      <Text style={styles.greCheckmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
-
-            {/* Espaçamento final */}
-            <View style={{ height: 20 }} />
-          </ScrollView>
-        </View>
+          </View>
+        </Modal>
+      </View>
     </ProtectedRoute>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#2B5D36',
-  },
   container: {
     flex: 1,
     backgroundColor: '#EFEFEF',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    marginBottom: 10,
+  },
+  backButtonText: {
+    color: '#2B5D36',
+    fontSize: 16,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 10,
     paddingBottom: 30,
-    alignItems: 'center',
   },
   mainTitle: {
     fontSize: 24,
@@ -427,21 +693,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignSelf: 'center',
   },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#666',
-    marginTop: 20,
-    marginBottom: 10,
-    alignSelf: 'flex-start',
-    width: CARD_WIDTH,
-  },
   card: {
     width: CARD_WIDTH,
     backgroundColor: '#3A7248',
     borderRadius: 12,
     padding: 20,
-    marginBottom: 10,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -536,6 +793,11 @@ const styles = StyleSheet.create({
   dateInputPlaceholder: {
     color: 'rgba(255, 255, 255, 0.5)',
   },
+  valueText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    marginBottom: 15,
+  },
   valueNonEditable: {
     fontSize: 14,
     color: '#FFFFFF',
@@ -574,16 +836,97 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     marginBottom: 15,
   },
-  saveButton: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
+  actionButton: {
+    width: CARD_WIDTH,
+    backgroundColor: '#3A7248',
+    paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3.84,
+    elevation: 3,
   },
-  saveButtonText: {
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 16,
+    marginTop: 10,
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 16,
+  },
+  // Estilos do Modal de GRE
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#3A7248',
-    fontSize: 14,
+  },
+  modalCloseButton: {
+    fontSize: 24,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  modalScrollView: {
+    paddingHorizontal: 20,
+  },
+  greOption: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  greOptionSelected: {
+    backgroundColor: '#E8F5E9',
+  },
+  greOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  greOptionTextSelected: {
+    color: '#3A7248',
+    fontWeight: '600',
+  },
+  greCheckmark: {
+    fontSize: 20,
+    color: '#3A7248',
     fontWeight: 'bold',
   },
 });

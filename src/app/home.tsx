@@ -1,7 +1,6 @@
 // app/home.tsx
 import AppHeader from '@/src/components/header';
 import InteractiveMap from '@/src/components/interactiveMap';
-import ProtectedRoute from '@/src/components/protectedRoutes';
 import StatsPanel from '@/src/components/statsPanel';
 import { FILTER_PANEL_HEIGHT, homeStyles } from '@/src/styles/styles';
 import React, { useState } from 'react';
@@ -21,16 +20,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // Importar o GeoJSON
 import geoJsonData from '@/assets/data/regioes.json';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const STATS_PANEL_WIDTH = SCREEN_WIDTH * 0.85;
+// Calcular altura máxima do painel: tela completa menos espaço para o botão de filtros e header
+const STATS_PANEL_MAX_HEIGHT = SCREEN_HEIGHT * 0.72; // 70% da altura da tela
 
-// Interface para os filtros
+// Interface para os filtros (apenas uma seleção por categoria)
 interface Filters {
-  mesorregiao: string[];
-  sexo: string[];
-  idade: string[];
-  anoPesquisa: string[];
-  serie: string[];
+  sexo: string | null;
+  anoPesquisa: string | null;
+  idade: string | null;
+  serie: string | null;
 }
 
 const HomeScreen: React.FC = () => {
@@ -40,43 +40,49 @@ const HomeScreen: React.FC = () => {
   const [slideRightAnim] = useState(new Animated.Value(STATS_PANEL_WIDTH));
   const [selectedMapRegion, setSelectedMapRegion] = useState<string | null>(null);
 
-  // Estado dos filtros
+  // Estado dos filtros (todos desmarcados por padrão)
   const [filters, setFilters] = useState<Filters>({
-    mesorregiao: ['Sertão', 'São Francisco', 'Agreste', 'Mata', 'Metropolitana'],
-    sexo: ['Masculino', 'Feminino'],
-    idade: ['14-15', '16-17', '18-19'],
-    anoPesquisa: ['2016', '2022'],
-    serie: ['1', '2', '3'],
+    sexo: null,
+    anoPesquisa: null,
+    idade: null,
+    serie: null,
   });
 
-  // Função para toggle de filtro
-  const toggleFilter = (category: keyof Filters, value: string) => {
-    setFilters(prevFilters => {
-      const currentValues = prevFilters[category];
-      const newValues = currentValues.includes(value)
-        ? currentValues.filter(v => v !== value)
-        : [...currentValues, value];
-      
-      return {
-        ...prevFilters,
-        [category]: newValues,
-      };
-    });
+  // Estado para filtros aplicados (enviados ao StatsPanel) - também começam desmarcados
+  const [appliedFilters, setAppliedFilters] = useState<Filters>({
+    sexo: null,
+    anoPesquisa: null,
+    idade: null,
+    serie: null,
+  });
+
+  // Função para selecionar filtro (apenas um por categoria)
+  const selectFilter = (category: keyof Filters, value: string) => {
+    setFilters(prevFilters => ({
+      ...prevFilters,
+      [category]: prevFilters[category] === value ? null : value,
+    }));
   };
 
   // Verifica se um filtro está marcado
   const isFilterChecked = (category: keyof Filters, value: string): boolean => {
-    return filters[category].includes(value);
+    return filters[category] === value;
   };
 
   // Handler quando uma região do mapa é clicada
   const handleMapRegionPress = (regionName: string) => {
-    console.log('Região clicada:', regionName);
+    console.log('🗺️ Região clicada no Home:', regionName);
     setSelectedMapRegion(regionName);
+    // Se o painel de stats estiver aberto, atualiza imediatamente
+    if (statsVisible) {
+      setAppliedFilters({...filters});
+    }
   };
 
   // Abre o painel de estatísticas
   const openStats = () => {
+    // Atualiza os filtros aplicados antes de abrir o painel
+    setAppliedFilters({...filters});
     setStatsVisible(true);
     Animated.spring(slideRightAnim, {
       toValue: 0,
@@ -122,30 +128,11 @@ const HomeScreen: React.FC = () => {
   // Aplicar filtros
   const applyFilters = () => {
     console.log('Filtros aplicados:', filters);
-    fetchDashboardData(filters);
+    setAppliedFilters(filters); // Atualiza os filtros aplicados
     closeFilters();
   };
 
-  // Função exemplo para buscar dados com filtros
-  const fetchDashboardData = async (appliedFilters: Filters) => {
-    try {
-      const queryParams = new URLSearchParams();
-      
-      appliedFilters.mesorregiao.forEach(m => queryParams.append('mesorregiao', m));
-      appliedFilters.sexo.forEach(s => queryParams.append('sexo', s));
-      appliedFilters.idade.forEach(i => queryParams.append('idade', i));
-      appliedFilters.anoPesquisa.forEach(a => queryParams.append('ano', a));
-      appliedFilters.serie.forEach(s => queryParams.append('serie', s));
-
-      console.log('Query params:', queryParams.toString());
-      
-    } catch (error) {
-      console.error('Erro ao buscar dados:', error);
-    }
-  };
-
   return (
-    <ProtectedRoute>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaView style={homeStyles.container} edges={['bottom']}>
           {/* Header com menu lateral */}
@@ -208,21 +195,23 @@ const HomeScreen: React.FC = () => {
                   homeStyles.statsPanel,
                   {
                     transform: [{ translateX: slideRightAnim }],
+                    maxHeight: STATS_PANEL_MAX_HEIGHT,
                   },
                 ]}
                 onStartShouldSetResponder={() => true}
               > 
-                <StatsPanel selectedRegion={selectedMapRegion} />
+                <StatsPanel 
+                  selectedRegion={selectedMapRegion} 
+                  filters={appliedFilters}
+                />
               </Animated.View>
 
               <Animated.View style = {[{transform: [{ translateX: slideRightAnim }]}]} >
-
                 <Image
                     source={require('@/assets/images/dashboard_btn.png')}
                     resizeMode="contain"
                     style = {[homeStyles.statsPanelButton]}
                 />
-
               </Animated.View>
             </TouchableOpacity>
           </Modal>
@@ -265,26 +254,29 @@ const HomeScreen: React.FC = () => {
                   <View style={homeStyles.filterColumnsContainer}>
                     {/* COLUNA ESQUERDA */}
                     <View style={homeStyles.filterColumn}>
-                      {/* Mesorregião */}
+                      {/* Sexo */}
                       <View style={homeStyles.filterSection}>
-                        <Text style={homeStyles.filterSectionTitle}>Mesorregião</Text>
+                        <Text style={homeStyles.filterSectionTitle}>Sexo</Text>
                         <View style={homeStyles.checkboxGroup}>
-                          {['Sertão', 'São Francisco', 'Agreste', 'Mata', 'Metropolitana'].map((regiao) => (
+                          {[
+                            { value: 'Masculino', label: 'Masculino ♂' },
+                            { value: 'Feminino', label: 'Feminino ♀' }
+                          ].map(({ value, label }) => (
                             <TouchableOpacity
-                              key={regiao}
+                              key={value}
                               style={homeStyles.checkboxItem}
-                              onPress={() => toggleFilter('mesorregiao', regiao)}
+                              onPress={() => selectFilter('sexo', value)}
                               activeOpacity={0.7}
                             >
                               <View style={[
                                 homeStyles.checkbox,
-                                isFilterChecked('mesorregiao', regiao) && homeStyles.checkboxChecked
+                                isFilterChecked('sexo', value) && homeStyles.checkboxChecked
                               ]}>
-                                {isFilterChecked('mesorregiao', regiao) && (
+                                {isFilterChecked('sexo', value) && (
                                   <Text style={homeStyles.checkboxCheck}>✓</Text>
                                 )}
                               </View>
-                              <Text style={homeStyles.checkboxLabel}>{regiao} 📋</Text>
+                              <Text style={homeStyles.checkboxLabel}>{label}</Text>
                             </TouchableOpacity>
                           ))}
                         </View>
@@ -302,7 +294,7 @@ const HomeScreen: React.FC = () => {
                             <TouchableOpacity
                               key={value}
                               style={homeStyles.checkboxItem}
-                              onPress={() => toggleFilter('idade', value)}
+                              onPress={() => selectFilter('idade', value)}
                               activeOpacity={0.7}
                             >
                               <View style={[
@@ -322,34 +314,6 @@ const HomeScreen: React.FC = () => {
 
                     {/* COLUNA DIREITA */}
                     <View style={homeStyles.filterColumn}>
-                      {/* Sexo */}
-                      <View style={homeStyles.filterSection}>
-                        <Text style={homeStyles.filterSectionTitle}>Sexo</Text>
-                        <View style={homeStyles.checkboxGroup}>
-                          {[
-                            { value: 'Masculino', label: 'Masculino ♂' },
-                            { value: 'Feminino', label: 'Feminino ♀' }
-                          ].map(({ value, label }) => (
-                            <TouchableOpacity
-                              key={value}
-                              style={homeStyles.checkboxItem}
-                              onPress={() => toggleFilter('sexo', value)}
-                              activeOpacity={0.7}
-                            >
-                              <View style={[
-                                homeStyles.checkbox,
-                                isFilterChecked('sexo', value) && homeStyles.checkboxChecked
-                              ]}>
-                                {isFilterChecked('sexo', value) && (
-                                  <Text style={homeStyles.checkboxCheck}>✓</Text>
-                                )}
-                              </View>
-                              <Text style={homeStyles.checkboxLabel}>{label}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      </View>
-
                       {/* Ano da pesquisa */}
                       <View style={homeStyles.filterSection}>
                         <Text style={homeStyles.filterSectionTitle}>Ano da pesquisa</Text>
@@ -358,7 +322,7 @@ const HomeScreen: React.FC = () => {
                             <TouchableOpacity
                               key={ano}
                               style={homeStyles.checkboxItem}
-                              onPress={() => toggleFilter('anoPesquisa', ano)}
+                              onPress={() => selectFilter('anoPesquisa', ano)}
                               activeOpacity={0.7}
                             >
                               <View style={[
@@ -383,7 +347,7 @@ const HomeScreen: React.FC = () => {
                             <TouchableOpacity
                               key={serie}
                               style={homeStyles.checkboxItem}
-                              onPress={() => toggleFilter('serie', serie)}
+                              onPress={() => selectFilter('serie', serie)}
                               activeOpacity={0.7}
                             >
                               <View style={[
@@ -421,7 +385,6 @@ const HomeScreen: React.FC = () => {
           </Modal>
         </SafeAreaView>
       </GestureHandlerRootView>
-    </ProtectedRoute>
   );
 };
 

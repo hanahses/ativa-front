@@ -1,6 +1,6 @@
 // src/components/InteractiveMap.tsx
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -23,6 +23,8 @@ interface InteractiveMapProps {
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPress }) => {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [selectedRecifeSubRegion, setSelectedRecifeSubRegion] = useState<string | null>(null);
+  const [showRecifeDropdown, setShowRecifeDropdown] = useState(false);
   const [bounds, setBounds] = useState({ minLat: 0, maxLat: 0, minLon: 0, maxLon: 0 });
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,8 +87,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
         }
       });
 
-      // Reduzir padding para mapa ficar maior
-      const latPadding = (maxLat - minLat) * 0.01; // Reduzido para ter menos margem
+      const latPadding = (maxLat - minLat) * 0.01;
       const lonPadding = (maxLon - minLon) * 0.01;
 
       minLat -= latPadding;
@@ -94,7 +95,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
       minLon -= lonPadding;
       maxLon += lonPadding;
 
-      console.log('🔍 Bounds calculados:', { minLat, maxLat, minLon, maxLon });
+      console.log('📍 Bounds calculados:', { minLat, maxLat, minLon, maxLon });
       setBounds({ minLat, maxLat, minLon, maxLon });
     } catch (err) {
       console.error('❌ Erro ao calcular bounds:', err);
@@ -109,31 +110,22 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
       return [0, 0];
     }
     
-    // Calcular proporções
     const dataWidth = maxLon - minLon;
     const dataHeight = maxLat - minLat;
     const dataAspect = dataWidth / dataHeight;
     const containerAspect = MAP_WIDTH / MAP_HEIGHT;
     
-    // Offsets base (você pode ajustar esses valores)
     let offsetX = 5;
-    let offsetY = -90; // Ajuste vertical (negativo = sobe, positivo = desce)
-    
-    // Fator de aumento do mapa (1.0 = tamanho original, 1.3 = 30% maior)
+    let offsetY = -90;
     const enlargeFactor = 1.3;
     
     let scale;
     
-    // Ajustar para preencher o container mantendo proporção
     if (dataAspect > containerAspect) {
-      // Dados são mais largos - ajustar pela largura
       scale = (MAP_WIDTH / dataWidth) * enlargeFactor;
-      // Centralizar verticalmente + offset customizado
       offsetY += (MAP_HEIGHT - (dataHeight * scale)) / 2;
     } else {
-      // Dados são mais altos - ajustar pela altura
       scale = (MAP_HEIGHT / dataHeight) * enlargeFactor;
-      // Centralizar horizontalmente + offset customizado
       offsetX += (MAP_WIDTH - (dataWidth * scale)) / 2;
     }
     
@@ -166,17 +158,49 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
   const handleRegionPress = (regionName: string) => {
     console.log('🗺️ Região clicada:', regionName);
     
-    // Toggle: se já está selecionada, desseleciona; senão, seleciona
-    if (selectedRegion === regionName) {
-      setSelectedRegion(null);
-      console.log('🗺️ Região desmarcada:', regionName);
-    } else {
-      setSelectedRegion(regionName);
-      console.log('🗺️ Região marcada:', regionName);
+    // Normalizar nome (remover "RD " e transformar em apenas "Recife")
+    let displayName = regionName.replace('RD ', '');
+    if (displayName.includes('Recife')) {
+      displayName = 'Recife';
     }
     
+    // Toggle: se já está selecionada, desseleciona; senão, seleciona
+    if (selectedRegion === displayName) {
+      setSelectedRegion(null);
+      setShowRecifeDropdown(false);
+      setSelectedRecifeSubRegion(null);
+      console.log('🗺️ Região desmarcada:', displayName);
+    } else {
+      setSelectedRegion(displayName);
+      
+      // Se for Recife, mostrar dropdown
+      if (displayName === 'Recife') {
+        setShowRecifeDropdown(true);
+        // Definir Recife Sul como padrão
+        setSelectedRecifeSubRegion('Recife Sul');
+        if (onRegionPress) {
+          onRegionPress('RD Recife Sul');
+        }
+      } else {
+        setShowRecifeDropdown(false);
+        setSelectedRecifeSubRegion(null);
+        if (onRegionPress) {
+          onRegionPress(regionName);
+        }
+      }
+      
+      console.log('🗺️ Região marcada:', displayName);
+    }
+  };
+
+  const handleRecifeSubRegionSelect = (subRegion: string) => {
+    setSelectedRecifeSubRegion(subRegion);
+    console.log('🗺️ Sub-região de Recife selecionada:', subRegion);
+    
     if (onRegionPress) {
-      onRegionPress(regionName);
+      // Mapear para o nome correto no backend
+      const mappedName = subRegion === 'Recife Norte' ? 'RD Recife Norte' : 'RD Recife Sul';
+      onRegionPress(mappedName);
     }
   };
 
@@ -184,7 +208,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
   const pinchGesture = Gesture.Pinch()
     .onUpdate((event) => {
       scale.value = savedScale.value * event.scale;
-      // Limitar o zoom entre 1x e 5x
       scale.value = Math.max(1, Math.min(scale.value, 5));
     })
     .onEnd(() => {
@@ -194,11 +217,9 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
   // Gesto de pan (arrastar)
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
-      // Calcular os limites de pan baseado no zoom atual
       const maxTranslateX = (MAP_WIDTH * (scale.value - 1)) / 2;
       const maxTranslateY = (MAP_HEIGHT * (scale.value - 1)) / 2;
 
-      // Aplicar translação com limites
       translateX.value = Math.max(
         -maxTranslateX,
         Math.min(maxTranslateX, savedTranslateX.value + event.translationX)
@@ -271,7 +292,12 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
                 <G>
                   {geoJsonData.features.map((feature: any, index: number) => {
                     try {
-                      const isSelected = selectedRegion === feature.properties.name;
+                      let displayName = feature.properties.name.replace('RD ', '');
+                      if (displayName.includes('Recife')) {
+                        displayName = 'Recife';
+                      }
+                      
+                      const isSelected = selectedRegion === displayName;
                       const pathData = coordinatesToPath(feature.geometry);
                       
                       if (!pathData) return null;
@@ -295,11 +321,50 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ geoJsonData, onRegionPr
               </Svg>
             </Animated.View>
           </GestureDetector>
+
+          {/* Dropdown de Recife (canto inferior esquerdo) */}
+          {showRecifeDropdown && (
+            <View style={styles.recifeDropdownContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.recifeDropdownOption,
+                  selectedRecifeSubRegion === 'Recife Norte' && styles.recifeDropdownOptionSelected
+                ]}
+                onPress={() => handleRecifeSubRegionSelect('Recife Norte')}
+              >
+                <Text style={[
+                  styles.recifeDropdownText,
+                  selectedRecifeSubRegion === 'Recife Norte' && styles.recifeDropdownTextSelected
+                ]}>
+                  Recife Norte
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.recifeDropdownOption,
+                  selectedRecifeSubRegion === 'Recife Sul' && styles.recifeDropdownOptionSelected
+                ]}
+                onPress={() => handleRecifeSubRegionSelect('Recife Sul')}
+              >
+                <Text style={[
+                  styles.recifeDropdownText,
+                  selectedRecifeSubRegion === 'Recife Sul' && styles.recifeDropdownTextSelected
+                ]}>
+                  Recife Sul
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
+        {/* Label da região selecionada */}
         {selectedRegion && (
           <View style={styles.legendContainer}>
-            <Text style={styles.legendText}>Região: {selectedRegion}</Text>
+            <Text style={styles.legendText}>
+              Região: {selectedRegion}
+              {selectedRecifeSubRegion && ` - ${selectedRecifeSubRegion}`}
+            </Text>
           </View>
         )}
       </View>
@@ -385,6 +450,36 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  recifeDropdownContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#2B5D36',
+    borderRadius: 8,
+    padding: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  recifeDropdownOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 6,
+    marginVertical: 2,
+  },
+  recifeDropdownOptionSelected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  recifeDropdownText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  recifeDropdownTextSelected: {
+    fontWeight: '700',
   },
 });
 

@@ -270,7 +270,7 @@ export const globalStyles = StyleSheet.create({
 });
 
 // Constantes para Home
-export const FILTER_PANEL_HEIGHT = height * 0.65;
+export const FILTER_PANEL_HEIGHT = height * 0.55;
 
 // Estilos da tela Home
 export const homeStyles = StyleSheet.create({
@@ -325,6 +325,7 @@ export const homeStyles = StyleSheet.create({
     shadowRadius: 1.41,
     elevation: 2,
   },
+
   filterButtonContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
