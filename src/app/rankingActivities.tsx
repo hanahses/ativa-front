@@ -278,7 +278,7 @@ const RankingActivities: React.FC = () => {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/activities/${teacherId}/${selectedActivity._id}/confirm`,
+        `${API_BASE_URL}/activities/confirm/${selectedActivity._id}/${teacherId}`,
         {
           method: 'PATCH',
           headers: {
