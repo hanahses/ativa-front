@@ -17,12 +17,12 @@ module.exports = ({ config }) => {
   // Configuração base
   const baseConfig = {
     ...config,
-    name: "mobile-frontend",
-    slug: "mobile-frontend",
+    name: "Atitude",
+    slug: "atitude",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/icon.png",
-    scheme: "mobilefrontend",
+    icon: "./assets/images/Projeto_Atitude_Logotipo.png",
+    scheme: "atitude",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     ios: {
@@ -31,13 +31,13 @@ module.exports = ({ config }) => {
     android: {
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
-        foregroundImage: "./assets/images/android-icon-foreground.png",
-        backgroundImage: "./assets/images/android-icon-background.png",
-        monochromeImage: "./assets/images/android-icon-monochrome.png"
+        foregroundImage: "./assets/images/Projeto_Atitude_Logotipo.png",
+        backgroundImage: "./assets/images/Projeto_Atitude_Logotipo.png",
+        monochromeImage: "./assets/images/Projeto_Atitude_Logotipo.png"
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
-      package: "com.anonymous.mobilefrontend"
+      package: "com.anonymous.atitude"
     },
     web: {
       output: "static",
