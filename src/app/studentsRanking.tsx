@@ -4,6 +4,7 @@ import ProtectedRoute from '@/src/components/protectedRoutes';
 import { useAuth } from '@/src/context/authContext';
 import { API_BASE_URL } from '@/src/services/authService';
 import { colors } from '@/src/styles/styles';
+import Clipboard from '@react-native-clipboard/clipboard';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -165,6 +166,11 @@ const StudentsRanking: React.FC = () => {
       const formatted = selectedDate.toLocaleDateString('pt-BR');
       setDisplayEndDate(formatted);
     }
+  };
+
+  const handleCopyCode = () => {
+    Clipboard.setString(createdRankingCode);
+    Alert.alert('Código Copiado', 'O código do ranking foi copiado para a área de transferência.');
   };
 
   const handleCreateRanking = async () => {
@@ -540,9 +546,14 @@ const handleRankingCardPress = (ranking: Ranking) => {
               {createdRankingCode && (
                 <View style={styles.codeContainer}>
                   <Text style={styles.codeLabel}>Código do Ranking:</Text>
-                  <View style={styles.codeBox}>
-                    <Text style={styles.codeText}>{createdRankingCode}</Text>
-                  </View>
+                  <TouchableOpacity 
+                    onLongPress={handleCopyCode}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.codeBox}>
+                      <Text style={styles.codeText}>{createdRankingCode}</Text>
+                    </View>
+                  </TouchableOpacity>
                   <Text style={styles.codeInstruction}>
                     Compartilhe este código com os alunos para que possam entrar no ranking.
                   </Text>
