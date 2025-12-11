@@ -178,7 +178,7 @@ const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Modal de Estatísticas */}
+          {/* Modal de Estatísticas - CORRIGIDO */}
           <Modal
             visible={statsVisible}
             transparent
@@ -195,7 +195,6 @@ const HomeScreen: React.FC = () => {
                   homeStyles.statsPanel,
                   {
                     transform: [{ translateX: slideRightAnim }],
-                    maxHeight: STATS_PANEL_MAX_HEIGHT,
                   },
                 ]}
                 onStartShouldSetResponder={() => true}
@@ -203,14 +202,6 @@ const HomeScreen: React.FC = () => {
                 <StatsPanel 
                   selectedRegion={selectedMapRegion} 
                   filters={appliedFilters}
-                />
-              </Animated.View>
-
-              <Animated.View style = {[{transform: [{ translateX: slideRightAnim }]}]} >
-                <Image
-                    source={require('@/assets/images/dashboard_btn.png')}
-                    resizeMode="contain"
-                    style = {[homeStyles.statsPanelButton]}
                 />
               </Animated.View>
             </TouchableOpacity>

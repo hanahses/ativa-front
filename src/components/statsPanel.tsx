@@ -105,7 +105,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('🔄 StatsPanel detectou mudança - Região:', selectedRegion, 'Filtros:', filters);
+    console.log('📄 StatsPanel detectou mudança - Região:', selectedRegion, 'Filtros:', filters);
     fetchData();
   }, [selectedRegion, filters]);
 
@@ -497,9 +497,12 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         bounces={true}
-        contentInset={{ top: 0, bottom: 20 }} // Espaço extra no iOS
+        scrollEventThrottle={16}
+        nestedScrollEnabled={true}
+        removeClippedSubviews={false}
+        contentInset={{ top: 0, bottom: 20 }}
         contentInsetAdjustmentBehavior="never"
       >
         {renderChart()}
@@ -517,31 +520,32 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderBottomLeftRadius: 10,
     backgroundColor: colors.primary,
-    maxHeight: SCREEN_HEIGHT * 0.72, // 70% da altura da tela
+    maxHeight: SCREEN_HEIGHT * 0.72,
     height: '100%',
+    overflow: 'hidden',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 15,
-    paddingTop: 20, // Aumentado para dar mais espaço no topo
-    paddingBottom: 20, // Aumentado para dar mais espaço no final
+    paddingTop: 20,
+    paddingBottom: 20,
   },
   chartsContainer: {
     gap: 20,
-    paddingBottom: 10, // Espaço extra no final
+    paddingBottom: 10,
   },
   chartContainer: {
     backgroundColor: colors.white,
     borderRadius: 12,
-    padding: 12, // Reduzido de 15 para 12
-    marginBottom: 15, // Reduzido de 20 para 15
+    padding: 12,
+    marginBottom: 15,
     borderWidth: 2,
     borderColor: colors.primary,
   },
   chartHeader: {
-    marginBottom: 10, // Reduzido de 15 para 10
+    marginBottom: 10,
   },
   chartTitle: {
     fontSize: 16,
@@ -615,7 +619,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10, // Reduzido de 15 para 10
+    marginTop: 10,
     gap: 20,
   },
   legendItem: {
