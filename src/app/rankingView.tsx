@@ -5,8 +5,8 @@ import { useAuth } from '@/src/context/authContext';
 import { API_BASE_URL } from '@/src/services/authService';
 import { colors } from '@/src/styles/styles';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -85,6 +85,15 @@ const RankingView: React.FC = () =>
       fetchRankingData();
     }
   }, [id]);
+
+  // Atualiza dados quando a tela volta ao foco
+  useFocusEffect(
+    useCallback(() => {
+      if (id) {
+        fetchRankingData();
+      }
+    }, [id])
+  );
 
   const fetchRankingData = async () => {
     setIsLoading(true);
