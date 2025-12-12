@@ -4,22 +4,26 @@ import { colors } from '@/src/styles/styles';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View
 } from 'react-native';
 import Svg, { G, Line, Rect, Text as SvgText } from 'react-native-svg';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PANEL_WIDTH = SCREEN_WIDTH * 0.85;
+const HEADER_HEIGHT = 0;
+const PANEL_MAX_HEIGHT = SCREEN_HEIGHT * 0.72;
 const CHART_WIDTH = PANEL_WIDTH - 50;
-const CHART_HEIGHT = 200; // Reduzido ainda mais para caber melhor
+const CHART_HEIGHT = 200;
 
-// Mapeamento de GRE (baseado nos nomes reais do GeoJSON)
+// Mapeamento de GRE
 const GRE_MAP: { [key: string]: number } = {
-  // Nomes completos (caso existam)
   'Recife Norte': 1,
   'Recife Sul': 2,
   'Metropolitana Norte': 3,
@@ -36,8 +40,6 @@ const GRE_MAP: { [key: string]: number } = {
   'Sertão do Médio São Francisco': 14,
   'Sertão Central': 15,
   'Sertão do Araripe': 16,
-  
-  // Nomes abreviados do GeoJSON (RD = Regional de Desenvolvimento)
   'RD Recife Norte': 1,
   'RD Recife Sul': 2,
   'RD Metropolitana Norte': 3,
@@ -96,6 +98,8 @@ interface StatsPanelProps {
 }
 
 const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [slideAnim] = useState(new Animated.Value(PANEL_WIDTH));
   const [data, setData] = useState<ChartData>({
     bmi: [],
     screenTime: [],
@@ -105,54 +109,71 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('📄 StatsPanel detectou mudança - Região:', selectedRegion, 'Filtros:', filters);
-    fetchData();
-  }, [selectedRegion, filters]);
+    if (isOpen) {
+      fetchData();
+    }
+  }, [selectedRegion, filters, isOpen]);
+
+  const togglePanel = () => {
+    if (isOpen) {
+      closePanel();
+    } else {
+      openPanel();
+    }
+  };
+
+  const openPanel = () => {
+    setIsOpen(true);
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 11,
+    }).start();
+  };
+
+  const closePanel = () => {
+    Animated.timing(slideAnim, {
+      toValue: PANEL_WIDTH,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsOpen(false);
+    });
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Construir os parâmetros da query (SEM researchType, ele vai no path)
       const params = new URLSearchParams();
       
-      // Ano da pesquisa (number)
       if (filters?.anoPesquisa) {
         params.append('year', filters.anoPesquisa);
       }
 
-      // Série (number)
       if (filters?.serie) {
         params.append('serie', filters.serie);
       }
 
-      // GRE (number de 1 a 16)
       if (selectedRegion && GRE_MAP[selectedRegion]) {
         params.append('gre', GRE_MAP[selectedRegion].toString());
-        console.log('🗺️ GRE aplicado:', selectedRegion, '=', GRE_MAP[selectedRegion]);
-      } else {
-        console.log('⚠️ GRE não encontrado para região:', selectedRegion);
-        console.log('📋 Regiões disponíveis no mapa:', Object.keys(GRE_MAP));
       }
 
-      // Idade (number - extrair primeiro número do range)
       if (filters?.idade) {
         const idadeStr = String(filters.idade);
         const idadeNumber = idadeStr.split('-')[0];
         params.append('idade', idadeNumber);
       }
 
-      // Sexo (number: 1 = Masculino, 2 = Feminino)
       if (filters?.sexo) {
         const sexoNumber = filters.sexo === 'Masculino' ? '1' : '2';
         params.append('sexo', sexoNumber);
       }
 
       const queryString = params.toString();
-      console.log('📤 Parâmetros:', Object.fromEntries(params));
 
-      // Buscar dados dos três tipos de pesquisa simultaneamente
       const [bmiResponse, screenTimeResponse, physicalActivityResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/research/query/bmi?${queryString}`, {
           method: 'GET',
@@ -178,12 +199,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
         physicalActivityResponse.json()
       ]);
 
-      console.log('📥 Dados recebidos:', {
-        bmi: bmiData,
-        screenTime: screenTimeData,
-        physicalActivity: physicalActivityData
-      });
-
       setData({
         bmi: bmiData,
         screenTime: screenTimeData,
@@ -200,7 +215,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
   const renderBMIChart = (chartData: AgeGroupData[]) => {
     if (!chartData || chartData.length === 0) return null;
 
-    // Configurações do gráfico
     const padding = { top: 20, right: 20, bottom: 40, left: 50 };
     const minGroupWidth = 80;
     const groupWidth = Math.max(minGroupWidth, (CHART_WIDTH - padding.left - padding.right) / chartData.length);
@@ -209,7 +223,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
     const chartAreaWidth = dynamicChartWidth - padding.left - padding.right;
     const chartAreaHeight = CHART_HEIGHT - padding.top - padding.bottom;
 
-    // Encontrar valor máximo
     let maxValue = 0;
     chartData.forEach(ageGroup => {
       ageGroup.results.forEach(result => {
@@ -222,7 +235,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
 
     return (
       <Svg width={dynamicChartWidth} height={CHART_HEIGHT}>
-        {/* Linhas de grade */}
         {[0, 0.25, 0.5, 0.75, 1].map((fraction, idx) => {
           const y = padding.top + chartAreaHeight * (1 - fraction);
           const value = (maxValue * fraction).toFixed(0);
@@ -234,7 +246,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
           );
         })}
 
-        {/* Barras */}
         {chartData.map((ageGroup, groupIdx) => {
           const masculino = ageGroup.results.find(r => r.gender === 'Masculino');
           const feminino = ageGroup.results.find(r => r.gender === 'Feminino');
@@ -272,7 +283,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
     const dynamicChartWidth = CHART_WIDTH;
     const chartAreaHeight = CHART_HEIGHT - padding.top - padding.bottom;
 
-    // Encontrar valor máximo (usando tempo total de tela)
     let maxValue = 0;
     chartData.forEach(result => {
       maxValue = Math.max(maxValue, result.averageSptTime);
@@ -362,7 +372,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
     );
   };
 
-  const renderChart = () => {
+  const renderContent = () => {
     if (isLoading) {
       return (
         <View style={styles.loadingContainer}>
@@ -396,7 +406,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
 
     return (
       <View style={styles.chartsContainer}>
-        {/* Gráfico BMI */}
         {data.bmi.length > 0 && (
           <View style={styles.chartContainer}>
             <View style={styles.chartHeader}>
@@ -405,7 +414,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
                 <Text style={styles.chartSubtitle}>Região: {selectedRegion}</Text>
               )}
             </View>
-
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={true}
@@ -413,7 +421,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
             >
               {renderBMIChart(data.bmi)}
             </ScrollView>
-
             <View style={styles.legend}>
               <View style={styles.legendItem}>
                 <View style={[styles.legendColor, { backgroundColor: colors.primary }]} />
@@ -427,7 +434,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
           </View>
         )}
 
-        {/* Gráfico Screen Time */}
         {data.screenTime.length > 0 && (
           <View style={styles.chartContainer}>
             <View style={styles.chartHeader}>
@@ -436,7 +442,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
                 <Text style={styles.chartSubtitle}>Região: {selectedRegion}</Text>
               )}
             </View>
-
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={true}
@@ -444,7 +449,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
             >
               {renderScreenTimeChart(data.screenTime)}
             </ScrollView>
-
             <View style={styles.legend}>
               <View style={styles.legendItem}>
                 <View style={[styles.legendColor, { backgroundColor: colors.primary }]} />
@@ -458,7 +462,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
           </View>
         )}
 
-        {/* Gráfico Physical Activity */}
         {data.physicalActivity.length > 0 && (
           <View style={styles.chartContainer}>
             <View style={styles.chartHeader}>
@@ -467,7 +470,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
                 <Text style={styles.chartSubtitle}>Região: {selectedRegion}</Text>
               )}
             </View>
-
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={true}
@@ -475,7 +477,6 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
             >
               {renderPhysicalActivityChart(data.physicalActivity)}
             </ScrollView>
-
             <View style={styles.legend}>
               <View style={styles.legendItem}>
                 <View style={[styles.legendColor, { backgroundColor: colors.primary }]} />
@@ -493,36 +494,103 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ selectedRegion, filters }) => {
   };
 
   return (
-    <View style={styles.panel}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
-        bounces={true}
-        scrollEventThrottle={16}
-        nestedScrollEnabled={true}
-        removeClippedSubviews={false}
-        contentInset={{ top: 0, bottom: 20 }}
-        contentInsetAdjustmentBehavior="never"
+    <View style={styles.container}>
+      {/* Botão flutuante */}
+      <Animated.View 
+        style={[
+          styles.buttonContainer,
+          {
+            transform: [{ translateX: slideAnim }]
+          }
+        ]}
       >
-        {renderChart()}
-        
-        {/* Espaço final garantido */}
-        <View style={{ height: 20 }} />
-      </ScrollView>
+        <TouchableOpacity 
+          style={styles.floatingButton}
+          onPress={togglePanel}
+          activeOpacity={0.8}
+        >
+          <Image
+            source={require('@/assets/images/dashboard_btn.png')}
+            style={styles.buttonImage}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Painel de estatísticas */}
+      {isOpen && (
+        <Animated.View
+          style={[
+            styles.panel,
+            {
+              transform: [{ translateX: slideAnim }]
+            }
+          ]}
+        >
+          {/* Borda superior verde */}
+          <View style={styles.topBorder} />
+          
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            bounces={true}
+            nestedScrollEnabled={true}
+            scrollEnabled={true}
+          >
+            {renderContent()}
+          </ScrollView>
+          
+          {/* Borda inferior verde */}
+          <View style={styles.bottomBorder} />
+        </Animated.View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: HEADER_HEIGHT + 15,
+    right: 0,
+    zIndex: 1000,
+  },
+  buttonContainer: {
+    position: 'absolute',
+    right: PANEL_WIDTH,
+    top: 0,
+    zIndex: 1001,
+  },
+  floatingButton: {
+    width: 56,
+    height: 56,
+    backgroundColor: colors.primary,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 0,
+  },
+  buttonImage: {
+    width: 48,
+    height: 48,
+  },
   panel: {
     width: PANEL_WIDTH,
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 10,
+    height: PANEL_MAX_HEIGHT,
     backgroundColor: colors.primary,
-    maxHeight: SCREEN_HEIGHT * 0.72,
-    height: '100%',
-    overflow: 'hidden',
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   scrollView: {
     flex: 1,
@@ -531,10 +599,10 @@ const styles = StyleSheet.create({
     padding: 15,
     paddingTop: 20,
     paddingBottom: 20,
+    paddingRight: 5, // Reduz padding direito para barra de scroll mais visível
   },
   chartsContainer: {
     gap: 20,
-    paddingBottom: 10,
   },
   chartContainer: {
     backgroundColor: colors.white,
@@ -556,10 +624,6 @@ const styles = StyleSheet.create({
   chartSubtitle: {
     fontSize: 12,
     color: colors.text.secondary,
-  },
-  chartWrapper: {
-    alignItems: 'center',
-    marginVertical: 10,
   },
   chartScrollView: {
     marginVertical: 10,
@@ -635,6 +699,20 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 11,
     color: colors.text.secondary,
+  },
+  topBorder: {
+    height: 15,
+    backgroundColor: colors.primary,
+    width: '100%',
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  bottomBorder: {
+    height: 15,
+    backgroundColor: colors.primary,
+    width: '100%',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 0,
   },
 });
 

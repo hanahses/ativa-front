@@ -344,7 +344,7 @@ export const homeStyles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  // Modal de Filtros
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -468,29 +468,49 @@ export const homeStyles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  // Modal de Estatísticas - CORRIGIDO
+  // Overlay e painel de estatísticas
   statsOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center', // Centraliza verticalmente
-    alignItems: 'flex-end', // Alinha à direita
+    //backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
   },
-
   statsPanel: {
-    width: width * 0.85,
-    height: height * 0.72, // 72% da altura da tela
-    backgroundColor: colors.primary,
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
+    position: 'absolute',
+    right: 0,
+    top: HEADER_HEIGHT + 15, // Começa um pouco abaixo do header
+    width: width * 0.83, // 85% da largura da tela
+    height: STATS_PANEL_HEIGHT, // Altura fixa em 75% da tela
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: -2, height: 0 },
     shadowOpacity: 0.25,
-    shadowRadius: 5,
+    shadowRadius: 3.84,
     elevation: 5,
   },
-
+  statsPanelButtonContainer: {
+    position: 'absolute',
+    top: -95, // Posiciona acima do painel, alinhado com o botão original
+    left: 15,
+    zIndex: 10,
+  },
   statsPanelButton: {
     width: 56,
     height: 56,
+    left:-( width * 0.83),
+    top: HEADER_HEIGHT + 15,
+    backgroundColor: colors.primary,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    // elevation: 5,
   },
+
 });
