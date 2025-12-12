@@ -56,8 +56,20 @@ interface StudentData {
   gender: string;
 }
 
+// Funções de validação
+const removeNumbers = (text: string) => {
+  return text.replace(/[0-9]/g, '');
+};
+
+const removeNonNumeric = (text: string) => {
+  return text.replace(/[^0-9.]/g, '');
+};
+
 const ProfileScreen: React.FC = () => {
   const { userProfile, isLoading, refreshUserProfile } = useAuth();
+
+  // Verifica se o usuário é aluno (role diferente de 1 = não é professor)
+  const isStudent = userProfile?.user?.role !== 1;
 
   // Estado para controlar o modo de edição
   const [isEditing, setIsEditing] = useState(false);
@@ -119,12 +131,12 @@ const ProfileScreen: React.FC = () => {
         setDisplayDate(userDisplayDate);
       }
 
-      // Dados do estudante
+      // Dados do estudante - apenas se for aluno
       let userWeight = '';
       let userHeight = '';
       let userGender = '';
 
-      if (userProfile.studentData) {
+      if (isStudent && userProfile.studentData) {
         if (userProfile.studentData.weightInGrams != null) {
           userWeight = (userProfile.studentData.weightInGrams / 1000).toString();
           setWeight(userWeight);
@@ -155,7 +167,7 @@ const ProfileScreen: React.FC = () => {
         gender: userGender,
       });
     }
-  }, [userProfile]);
+  }, [userProfile, isStudent]);
 
   // Função para cancelar a edição e restaurar valores originais
   const cancelEdit = () => {
@@ -247,11 +259,13 @@ const ProfileScreen: React.FC = () => {
         }
       }
 
-      // Verifica se algum campo de dados do estudante foi alterado
+      // Verifica se algum campo de dados do estudante foi alterado - apenas para alunos
       const studentDataChanged = 
-        weight !== originalValues.weight ||
-        height !== originalValues.height ||
-        gender !== originalValues.gender;
+        isStudent && (
+          weight !== originalValues.weight ||
+          height !== originalValues.height ||
+          gender !== originalValues.gender
+        );
 
       if (studentDataChanged) {
         // Validações para dados do estudante apenas se houver alteração
@@ -416,7 +430,7 @@ const ProfileScreen: React.FC = () => {
               <TextInput
                 style={styles.input}
                 value={name}
-                onChangeText={setName}
+                onChangeText={(text) => setName(removeNumbers(text))}
                 placeholder="Digite seu nome"
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
               />
@@ -440,7 +454,7 @@ const ProfileScreen: React.FC = () => {
               <TextInput
                 style={styles.input}
                 value={school}
-                onChangeText={setSchool}
+                onChangeText={(text) => setSchool(removeNumbers(text))}
                 placeholder="Digite o nome da escola"
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
               />
@@ -457,7 +471,7 @@ const ProfileScreen: React.FC = () => {
               <TextInput
                 style={styles.input}
                 value={city}
-                onChangeText={setCity}
+                onChangeText={(text) => setCity(removeNumbers(text))}
                 placeholder="Digite sua cidade"
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
               />
@@ -513,87 +527,94 @@ const ProfileScreen: React.FC = () => {
             ) : (
               <Text style={styles.valueText}>{gre || 'Não informado'}</Text>
             )}
-            <View style={styles.divider} />
+            {!isStudent && <View style={styles.divider} />}
 
-            {/* Peso */}
-            <View style={styles.infoRowWithIcon}>
-              <View style={styles.iconContainer}>
-                <Text style={styles.iconText}>⚖️</Text>
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.label}>PESO (KG)</Text>
+            {/* Campos de Peso, Altura e Sexo - apenas para alunos */}
+            {isStudent && (
+              <>
+                <View style={styles.divider} />
+
+                {/* Peso */}
+                <View style={styles.infoRowWithIcon}>
+                  <View style={styles.iconContainer}>
+                    <Text style={styles.iconText}>⚖️</Text>
+                  </View>
+                  <View style={styles.infoContent}>
+                    <Text style={styles.label}>PESO (KG)</Text>
+                    {isEditing ? (
+                      <TextInput
+                        style={styles.inputInline}
+                        value={weight}
+                        onChangeText={(text) => setWeight(removeNonNumeric(text))}
+                        placeholder="Ex: 65"
+                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                        keyboardType="numeric"
+                      />
+                    ) : (
+                      <Text style={styles.valueText}>{weight ? `${weight} kg` : 'Não informado'}</Text>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.divider} />
+
+                {/* Altura */}
+                <View style={styles.infoRowWithIcon}>
+                  <View style={styles.iconContainer}>
+                    <Text style={styles.iconText}>📏</Text>
+                  </View>
+                  <View style={styles.infoContent}>
+                    <Text style={styles.label}>ALTURA (CM)</Text>
+                    {isEditing ? (
+                      <TextInput
+                        style={styles.inputInline}
+                        value={height}
+                        onChangeText={(text) => setHeight(removeNonNumeric(text))}
+                        placeholder="Ex: 170"
+                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                        keyboardType="numeric"
+                      />
+                    ) : (
+                      <Text style={styles.valueText}>{height ? `${height} cm` : 'Não informado'}</Text>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.divider} />
+
+                {/* Sexo */}
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>SEXO</Text>
+                </View>
                 {isEditing ? (
-                  <TextInput
-                    style={styles.inputInline}
-                    value={weight}
-                    onChangeText={setWeight}
-                    placeholder="Ex: 65"
-                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                    keyboardType="numeric"
-                  />
+                  <View style={styles.genderContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.genderButton,
+                        gender === 'Masculino' && styles.genderButtonActive
+                      ]}
+                      onPress={() => setGender('Masculino')}
+                    >
+                      <Text style={[
+                        styles.genderButtonText,
+                        gender === 'Masculino' && styles.genderButtonTextActive
+                      ]}>Masculino ♂</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.genderButton,
+                        gender === 'Feminino' && styles.genderButtonActive
+                      ]}
+                      onPress={() => setGender('Feminino')}
+                    >
+                      <Text style={[
+                        styles.genderButtonText,
+                        gender === 'Feminino' && styles.genderButtonTextActive
+                      ]}>Feminino ♀</Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : (
-                  <Text style={styles.valueText}>{weight ? `${weight} kg` : 'Não informado'}</Text>
+                  <Text style={styles.valueText}>{gender || 'Não informado'}</Text>
                 )}
-              </View>
-            </View>
-            <View style={styles.divider} />
-
-            {/* Altura */}
-            <View style={styles.infoRowWithIcon}>
-              <View style={styles.iconContainer}>
-                <Text style={styles.iconText}>📏</Text>
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.label}>ALTURA (CM)</Text>
-                {isEditing ? (
-                  <TextInput
-                    style={styles.inputInline}
-                    value={height}
-                    onChangeText={setHeight}
-                    placeholder="Ex: 170"
-                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                    keyboardType="numeric"
-                  />
-                ) : (
-                  <Text style={styles.valueText}>{height ? `${height} cm` : 'Não informado'}</Text>
-                )}
-              </View>
-            </View>
-            <View style={styles.divider} />
-
-            {/* Sexo */}
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>SEXO</Text>
-            </View>
-            {isEditing ? (
-              <View style={styles.genderContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.genderButton,
-                    gender === 'Masculino' && styles.genderButtonActive
-                  ]}
-                  onPress={() => setGender('Masculino')}
-                >
-                  <Text style={[
-                    styles.genderButtonText,
-                    gender === 'Masculino' && styles.genderButtonTextActive
-                  ]}>Masculino ♂</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.genderButton,
-                    gender === 'Feminino' && styles.genderButtonActive
-                  ]}
-                  onPress={() => setGender('Feminino')}
-                >
-                  <Text style={[
-                    styles.genderButtonText,
-                    gender === 'Feminino' && styles.genderButtonTextActive
-                  ]}>Feminino ♀</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={styles.valueText}>{gender || 'Não informado'}</Text>
+              </>
             )}
           </View>
           
@@ -870,7 +891,6 @@ const styles = StyleSheet.create({
     color: '#ff4444',
     fontSize: 16,
   },
-  // Estilos do Modal de GRE
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
