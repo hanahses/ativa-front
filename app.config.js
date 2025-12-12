@@ -18,10 +18,10 @@ module.exports = ({ config }) => {
   const baseConfig = {
     ...config,
     name: "Atitude",
-    slug: "atitude",
+    slug: "mobile-frontend",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/Projeto_Atitude_Logotipo.png",
+    icon: "./assets/images/Atitude_icone.png",
     scheme: "atitude",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
@@ -31,9 +31,9 @@ module.exports = ({ config }) => {
     android: {
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
-        foregroundImage: "./assets/images/Projeto_Atitude_Logotipo.png",
-        backgroundImage: "./assets/images/Projeto_Atitude_Logotipo.png",
-        monochromeImage: "./assets/images/Projeto_Atitude_Logotipo.png"
+        foregroundImage: "./assets/images/Atitude_icone.png",
+        backgroundImage: "./assets/images/Atitude_icone.png",
+        monochromeImage: "./assets/images/Atitude_icone.png"
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
@@ -41,14 +41,14 @@ module.exports = ({ config }) => {
     },
     web: {
       output: "static",
-      favicon: "./assets/images/favicon.png"
+      favicon: "./assets/images/Atitude_icone.png"
     },
     plugins: [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          image: "./assets/images/splash-icon.png",
+          image: "./assets/images/Atitude_icone.png",
           imageWidth: 200,
           resizeMode: "contain",
           backgroundColor: "#ffffff",
